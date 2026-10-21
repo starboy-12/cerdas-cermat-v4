@@ -1,0 +1,10 @@
+node_modules/
+.env
+backend/.env
+backend/data/progress.json
+backend/data/progress.json.tmp
+backend/data/content.json
+.backups/
+*.dump
+.edge-shot-*/
+preview*.png

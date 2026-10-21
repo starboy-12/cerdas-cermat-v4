@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">Simbol untuk kisah para nabi</title>
+  <desc id="desc">Ilustrasi simbolis taman, bahtera, bulir gandum, tongkat dan laut, serta benda langit. Tidak menampilkan sosok nabi.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e8eee5"/><stop offset="1" stop-color="#f8f1dd"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#8ea9a0"/><stop offset="1" stop-color="#52766e"/></linearGradient>
+    <pattern id="grain" width="17" height="17" patternUnits="userSpaceOnUse"><circle cx="3" cy="5" r=".65" fill="#8f805b" opacity=".17"/><circle cx="13" cy="13" r=".55" fill="#8f805b" opacity=".12"/></pattern>
+  </defs>
+  <rect width="1200" height="380" rx="18" fill="url(#sky)"/>
+  <rect width="1200" height="380" rx="18" fill="url(#grain)"/>
+  <g stroke="#b8aa86" stroke-width="2" opacity=".52"><path d="M240 45v290M480 45v290M720 45v290M960 45v290"/></g>
+  <!-- garden and new growth -->
+  <g transform="translate(120 0)"><path d="M0 274c40-28 85-30 130-9 38-37 77-42 118-13v78H0z" fill="#ced8b5"/><path d="M123 275v-75" stroke="#62805d" stroke-width="8" stroke-linecap="round"/><path d="M122 232c-38-28-61-24-68-8 25 22 46 25 68 8zm3-22c28-34 53-34 64-19-18 26-38 34-64 19z" fill="#78916c"/><path d="M90 294c23-15 44-15 66 0" fill="none" stroke="#b89056" stroke-width="4" stroke-linecap="round"/><circle cx="47" cy="256" r="5" fill="#d29d68"/><circle cx="217" cy="262" r="5" fill="#d29d68"/></g>
+  <!-- ark on calm water -->
+  <g transform="translate(362 0)"><path d="M8 270c30-13 54-13 84 0s54 13 84 0 54-13 84 0v58H8z" fill="url(#water)"/><path d="M56 236h161l-25 36H81z" fill="#a8724c" stroke="#75553b" stroke-width="4"/><path d="M87 233v-38h96v38M111 195v-22h49v22" fill="#d6bf8c" stroke="#75553b" stroke-width="4"/><path d="M100 213h20m14 0h20m14 0h19" stroke="#9c7b50" stroke-width="4" stroke-linecap="round"/><path d="M35 291h230m-218 18h204" stroke="#c1d6c8" stroke-width="3" opacity=".75"/></g>
+  <!-- grain and provisions -->
+  <g transform="translate(598 0)" fill="none" stroke="#aa8650" stroke-width="6" stroke-linecap="round"><path d="M99 296V150m0 48c-30-35-49-35-54-14 23 24 40 30 54 14zm2-23c29-38 49-40 56-19-22 27-39 34-56 19zm-2-30c-24-31-40-31-45-13 17 22 32 26 45 13zm3-19c22-29 39-29 43-11-17 19-30 24-43 11z"/><path d="M58 300h83" stroke="#8c795d" stroke-width="4"/></g>
+  <!-- staff beside parted water and mountain -->
+  <g transform="translate(844 0)"><path d="M16 278 91 174l72 104" fill="#b5b19a"/><path d="m56 278 35-48 33 48" fill="#e9e6d7"/><path d="M164 256c26-17 50-17 76 0v77H164z" fill="#8fa99e"/><path d="M163 256c24 17 50 17 77 0m-77 23c24 17 50 17 77 0" fill="none" stroke="#52776d" stroke-width="5"/><path d="M213 194v77" stroke="#805b3e" stroke-width="8" stroke-linecap="round"/><path d="M213 194c0-13 19-17 24-6" fill="none" stroke="#805b3e" stroke-width="8" stroke-linecap="round"/></g>
+  <!-- stars, moon, and sun -->
+  <g transform="translate(1060 0)" fill="#ba9659"><circle cx="72" cy="200" r="35"/><path d="M157 152c-26 15-31 51-10 72 15 16 39 18 57 6-18 3-37-8-43-26-6-17 1-37 16-47-6-3-13-5-20-5z"/><path d="m70 136 7 17 18 1-14 11 5 18-16-10-15 10 5-18-14-11 18-1z"/><path d="m170 250 5 12 13 1-10 8 4 13-12-7-11 7 4-13-10-8 13-1z"/></g>
+  <g fill="#53654e" font-family="Georgia,serif" font-size="15" letter-spacing="1.5" text-anchor="middle"><text x="120" y="353">TAMAN</text><text x="600" y="353">KETEGUHAN</text><text x="1080" y="353">TANDA KEKUASAAN ALLAH</text></g>
+</svg>

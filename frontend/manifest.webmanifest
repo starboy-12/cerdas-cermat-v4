@@ -1,0 +1,12 @@
+{
+  "name": "Cerdas Cermat · Ruang Belajar",
+  "short_name": "Cerdas Cermat",
+  "description": "Buku belajar, cerita, latihan, dan progres belajar.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e8e8e1",
+  "theme_color": "#e9e8e1",
+  "icons": [{ "src": "/assets/storybook/prophets-symbols.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

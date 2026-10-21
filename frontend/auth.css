@@ -1,0 +1,69 @@
+.utility-overlay { z-index: 60; }
+.utility-overlay[aria-hidden="true"] { pointer-events: none; }
+.utility-overlay.is-open[aria-hidden="false"] { pointer-events: auto; }
+#account-dialog.auth-required { background: rgba(34, 36, 31, .72); }
+#account-dialog.auth-required { padding: 20px; }
+#account-dialog .auth-brand-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  margin-bottom: 22px;
+  border: 1px solid #dce4d8;
+  border-radius: 13px;
+  background: #f0f4ec;
+  color: #405b43;
+}
+#account-dialog .auth-brand-mark svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+#account-dialog.auth-required .catalog-dialog {
+  width: min(430px, 100%);
+  padding: 38px 38px 32px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 16px;
+  background: #fffdf8;
+  box-shadow: 0 28px 90px rgba(20, 24, 20, .24);
+}
+#account-dialog.auth-required #close-account { display: none; }
+.auth-kicker { margin-bottom: 10px; color: #596c56; font: 600 10px/1.4 var(--sans); letter-spacing: 1.4px; }
+#account-dialog.auth-required .catalog-dialog h2 { margin: 0; color: #292d27; font: 600 clamp(28px, 7vw, 35px)/1.16 var(--serif); letter-spacing: -.8px; }
+#account-dialog.auth-required .catalog-dialog h2 em { color: #506d50; }
+#account-dialog.auth-required .catalog-intro { margin: 11px 0 23px; color: #696d65; font: 13px/1.65 var(--sans); }
+#account-dialog.auth-required .utility-form { display: grid; gap: 15px; }
+#account-dialog.auth-required .utility-form > label:not([hidden]) { display: grid; gap: 7px; color: #41473f; font: 600 12px/1.4 var(--sans); letter-spacing: 0; }
+#account-dialog.auth-required .utility-form input,
+#account-dialog.auth-required .utility-form select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d9ddd5;
+  border-radius: 8px;
+  background: #fff;
+  color: #252a24;
+  font: 14px var(--sans);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+#account-dialog.auth-required .utility-form input::placeholder { color: #8b9088; }
+#account-dialog.auth-required .utility-form input:focus,
+#account-dialog.auth-required .utility-form select:focus { border-color: #587355; outline: none; box-shadow: 0 0 0 3px rgba(88, 115, 85, .14); }
+#account-dialog.auth-required .utility-form .catalog-actions { display: grid; gap: 13px; margin-top: 2px; }
+#account-dialog.auth-required #account-submit { min-height: 48px; border: 0; border-radius: 8px; background: #405b43; color: #fff; font: 600 14px var(--sans); transition: background .16s ease, transform .16s ease; }
+#account-dialog.auth-required #account-submit:hover { transform: translateY(-1px); background: #344b37; }
+#account-dialog.auth-required #account-mode-toggle { min-height: 28px; padding: 0; border: 0; color: #666c63; font: 12px var(--sans); }
+#account-dialog.auth-required #account-mode-toggle span { color: #405b43; font-weight: 700; }
+#account-dialog.auth-required #account-mode-toggle:hover span { text-decoration: underline; text-underline-offset: 3px; }
+#google-login-section { margin-top: 20px; }
+#google-login-section[hidden] { display: none !important; }
+#google-login-button { min-height: 42px; display: flex; justify-content: center; }
+.google-login-note { min-height: 1.5em; margin: 8px 0 0; color: #66655d; font: 12px/1.5 var(--sans); text-align: center; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 0; color: #858980; font: 11px var(--sans); }
+.auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #e3e5df; content: ""; }
+#account-auth-divider[hidden] { display: none !important; }
+@media (max-width: 520px) {
+  #account-dialog.auth-required { padding: 14px; }
+  #account-dialog.auth-required .catalog-dialog { padding: 30px 23px 24px; border-radius: 13px; }
+  #account-dialog .auth-brand-mark { width: 42px; height: 42px; margin-bottom: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #account-dialog.auth-required .utility-form input,
+  #account-dialog.auth-required #account-submit { transition: none; }
+}

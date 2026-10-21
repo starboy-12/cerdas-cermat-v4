@@ -1,0 +1,126 @@
+.storybook-library {
+  border-top: 1px solid rgba(44, 47, 40, .13);
+  padding: 58px 2% 60px;
+}
+
+.storybook-library .section-heading { margin: 0 0 30px; }
+.storybook-title-break { display: none; }
+.storybook-card {
+  display: flex;
+  align-items: center;
+  gap: clamp(28px, 6vw, 82px);
+  min-height: 320px;
+  width: 100%;
+  padding: 15px clamp(25px, 8vw, 110px);
+  border: 1px solid rgba(64, 77, 62, .15);
+  border-radius: 5px;
+  background: linear-gradient(115deg, rgba(255,255,255,.53), rgba(234,237,225,.36));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+.storybook-card:hover { border-color: rgba(67, 96, 69, .48); background: rgba(255,255,255,.64); transform: translateY(-2px); }
+.storybook-card:focus-visible, .storybook-lesson-option:focus-visible { outline: 2px solid #587355; outline-offset: 4px; }
+.storybook-cover {
+  position: relative;
+  flex: 0 0 194px;
+  height: 276px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 18px 13px;
+  color: #ead8a5;
+  background: linear-gradient(100deg, #173f39 0%, #22584c 12%, #2d6857 54%, #1d5147 100%);
+  border-radius: 2px 5px 5px 2px;
+  box-shadow: 5px 4px 0 #17423b, 11px 14px 21px rgba(41, 43, 34, .24);
+  transform: rotateY(-8deg) rotateZ(-1deg);
+  transition: transform .35s;
+}
+.storybook-card:hover .storybook-cover { transform: rotateY(-3deg) rotateZ(0) translateY(-4px); }
+.storybook-cover::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(234,216,165,.54); pointer-events: none; }
+.storybook-cover::after { content: ""; position: absolute; left: -10px; top: 0; bottom: -1px; width: 10px; background: repeating-linear-gradient(90deg,#c9bd98 0 1px,#e9dfc5 1px 3px,#b7a982 3px 4px); }
+.storybook-cover-spine { position: absolute; left: -8px; top: 27px; bottom: 21px; writing-mode: vertical-rl; transform: rotate(180deg); font: 6px var(--serif); letter-spacing: 1.1px; }
+.storybook-cover-emblem { font-size: 21px; line-height: 1; }
+.storybook-cover-kicker { margin-top: 13px; font: 6px var(--sans); letter-spacing: 1.25px; }
+.storybook-cover-title { margin-top: 24px; text-align: center; font: 600 27px/1.15 var(--serif); }
+.storybook-cover-title em { font-weight: 500; }
+.storybook-cover-rule { width: 51px; height: 1px; margin: 14px 0 10px; background: #d8c185; }
+.storybook-cover-topics { text-align: center; font: 6px var(--sans); letter-spacing: .55px; }
+.storybook-cover-author { margin-top: auto; font: 6px var(--sans); letter-spacing: .9px; }
+.storybook-card-copy { display: grid; gap: 8px; max-width: 360px; }
+.storybook-card-copy strong { font: 500 clamp(24px, 3vw, 38px)/1.15 var(--serif); }
+.storybook-card-copy > span { color: #5f765b; font: 600 10px var(--sans); letter-spacing: 1.5px; }
+.storybook-card-copy small { color: #77786e; font: 11px/1.6 var(--sans); }
+.storybook-library-note { display: flex; align-items: center; gap: 8px; margin: 19px 0 0 2px; color: #77796f; font: 10px var(--sans); }
+
+.storybook-level-field { display: grid; gap: 7px; margin: 20px 0 14px; color: #65665d; font: 10px var(--sans); letter-spacing: .3px; }
+.storybook-level-field select { width: 100%; min-height: 42px; border: 1px solid #d4cbb8; border-radius: 3px; padding: 0 11px; background: #fffdf7; color: #39392f; font: 12px var(--sans); }
+.storybook-lessons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.storybook-lessons > p { grid-column: 1 / -1; margin: 10px 0; color: #77766d; font: 11px/1.6 var(--sans); }
+.storybook-lessons .storybook-error { color: #9b5548; }
+.storybook-lesson-option { min-height: 70px; display: grid; grid-template-columns: 26px 1fr 16px; align-items: center; gap: 8px; padding: 10px; border: 1px solid #ddd7c9; border-radius: 3px; background: rgba(255,255,255,.4); color: #45453b; text-align: left; cursor: pointer; transition: border-color .18s, background .18s; }
+.storybook-lesson-option:hover, .storybook-lesson-option.is-selected { border-color: #6a8666; background: #f4f2e9; }
+.storybook-lesson-option.is-selected { box-shadow: inset 3px 0 #617c5e; }
+.storybook-lesson-number { color: #8a8b80; font: 12px var(--serif); }
+.storybook-lesson-text { display: grid; gap: 5px; }
+.storybook-lesson-text strong { color: #63775f; font: 600 8px var(--sans); letter-spacing: .7px; text-transform: uppercase; }
+.storybook-lesson-text span { font: 500 11px/1.35 var(--serif); }
+.storybook-lesson-arrow { color: #78816f; font-size: 14px; }
+
+#open-book[data-mode="storybook"] .question-list { display: block; overflow: auto; padding: 0 2px 8px; scrollbar-width: thin; }
+.story-figure { margin: 0 0 8px; text-align: center; }
+.story-illustration { display: block; width: 100%; height: clamp(95px, 17vh, 145px); border-radius: 4px; background: #f0ede3; object-fit: contain; }
+.story-figure figcaption { margin-top: 3px; color: #89816d; font: italic 7px var(--serif); }
+.story-copy { color: #4b473d; font: 11px/1.48 var(--serif); }
+.story-copy p { margin: 0 0 7px; }
+.story-copy .story-lead { color: #3f5e46; font-weight: 600; }
+.story-meaning { display: grid; gap: 3px; margin: 8px 0; padding: 7px 9px; border: 1px solid rgba(102,127,92,.28); border-radius: 3px; background: rgba(220,231,210,.42); color: #465a43; font: 9px/1.45 var(--serif); }
+.story-meaning strong { color: #5d7656; font: 600 7px var(--sans); letter-spacing: .7px; text-transform: uppercase; }
+.story-reference { margin: 8px 0 7px !important; padding-top: 5px; border-top: 1px solid rgba(171,155,120,.38); color: #797262; font: 7px/1.4 var(--sans); }
+.story-reference strong { margin-right: 4px; color: #65745e; font-weight: 600; }
+.story-prompt { display: grid; gap: 2px; margin-top: 8px !important; padding: 6px 8px; border-left: 2px solid #bb9c5f; background: rgba(219,205,170,.22); font-size: 9px; }
+.story-prompt strong { color: #8b7140; font: 600 7px var(--sans); letter-spacing: .65px; text-transform: uppercase; }
+.alphabet-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; margin: 7px 0; }
+.alphabet-grid > span { min-width: 0; display: flex; align-items: center; gap: 3px; padding: 3px 4px; border: 1px solid rgba(171,155,120,.48); border-radius: 2px; background: rgba(255,255,255,.33); }
+.alphabet-grid b { color: #587554; font: 700 10px var(--sans); }
+.alphabet-grid small { overflow: hidden; color: #665e4d; font: 8px var(--sans); text-overflow: ellipsis; }
+
+@media (max-width: 650px) {
+  .storybook-library { padding: 39px 0 42px; }
+  .storybook-library .section-heading { margin-bottom: 19px; }
+  .storybook-title-break { display: initial; }
+  .storybook-card { min-height: 248px; gap: 23px; padding: 16px 19px; }
+  .storybook-cover { flex-basis: 144px; height: 207px; padding: 14px 8px; }
+  .storybook-cover-emblem { font-size: 17px; }
+  .storybook-cover-kicker { margin-top: 9px; font-size: 5px; }
+  .storybook-cover-title { margin-top: 19px; font-size: 20px; }
+  .storybook-cover-rule { margin: 10px 0 7px; }
+  .storybook-cover-topics { font-size: 4px; }
+  .storybook-cover-author { font-size: 5px; }
+  .storybook-card-copy { gap: 6px; }
+  .storybook-card-copy strong { font-size: 21px; }
+  .storybook-card-copy > span { font-size: 7px; letter-spacing: 1px; }
+  .storybook-card-copy small { font-size: 9px; }
+  .storybook-library-note { font-size: 8px; }
+  .storybook-dialog { max-height: calc(100dvh - 28px); overflow-y: auto; }
+  .storybook-lessons { grid-template-columns: 1fr; gap: 6px; }
+  .storybook-lesson-option { min-height: 57px; }
+  .story-illustration { height: clamp(76px, 12vh, 100px); }
+  .story-figure { margin-bottom: 5px; }
+  .story-copy { font-size: 9px; line-height: 1.4; }
+  .story-copy p { margin-bottom: 5px; }
+  .story-reference { font-size: 6px; }
+  .story-meaning { padding: 5px 6px; font-size: 7px; }
+  .story-prompt { padding: 5px 6px; font-size: 7px; }
+  .alphabet-grid { gap: 3px; margin: 5px 0; }
+  .alphabet-grid > span { padding: 3px 4px; gap: 3px; }
+  .alphabet-grid b { font-size: 8px; }
+  .alphabet-grid small { font-size: 6.5px; }
+}
+
+@media (max-width: 370px) {
+  .storybook-card { gap: 15px; padding: 14px 13px; }
+  .storybook-cover { flex-basis: 128px; height: 190px; }
+  .storybook-card-copy strong { font-size: 18px; }
+}

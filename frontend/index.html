@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e9e8e1" />
+    <meta name="api-base-url" content="http://localhost:3101/api" />
+    <meta name="description" content="Buka buku Cerdas Cermat dan belajar sambil bermain." />
+    <title>Cerdas Cermat · Perpustakaan Belajar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/reader-motion.css" />
+    <link rel="stylesheet" href="/book-layout.css" />
+    <link rel="stylesheet" href="/storybook.css" />
+    <link rel="stylesheet" href="/auth.css" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script src="/config.js"></script>
+    <script src="/ui-components.js"></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main class="site-shell" inert>
+      <header class="topbar">
+        <a class="brand" href="#home">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M18 9c-4-3-8-3-13-2v18c5-1 9-1 13 2m0-18c4-3 8-3 13-2v18c-5-1-9-1-13 2m0-18v18"/></svg></span>
+          <span><strong>cerdas<span>cermat</span></strong><small>RUANG BELAJAR</small></span>
+        </a>
+        <nav class="topnav" aria-label="Navigasi utama"><a href="#rak">Perpustakaan</a><a href="#buku-cerita">Buku Cerita</a><a href="#cara">Cara belajar</a><button class="nav-progress" id="resume-link">Lanjutkan materi</button><button class="nav-progress" id="progress-link"><span class="nav-dot"></span> Progres saya</button><button class="nav-progress" id="account-link">Masuk</button><span class="sync-status" id="sync-status" role="status">Online</span></nav>
+        <button class="mobile-menu" id="mobile-menu" aria-label="Buka menu" aria-expanded="false"><span></span><span></span></button>
+      </header>
+
+      <section class="hero" id="home">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> BELAJAR JADI PETUALANGAN</div>
+          <h1>Buka buku,<br /><em>buka dunia.</em></h1>
+          <p>Temani rasa ingin tahumu. Pilih buku sesuai jenjang, buka lembar demi lembar, dan temukan hal baru di setiap halaman.</p>
+          <a class="primary-link" href="#rak">Jelajahi perpustakaan <span aria-hidden="true">↓</span></a>
+          <div class="hero-note"><span class="note-icon">✳</span><span>Belajar santai, satu halaman setiap waktu.</span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="sun-orbit orbit-one"></div><div class="sun-orbit orbit-two"></div>
+          <div class="art-sun"></div><div class="art-star star-one">✳</div><div class="art-star star-two">✳</div>
+          <div class="hero-book book-back"><span class="book-band"></span></div>
+          <div class="hero-book book-front"><span class="cover-emblem">✳</span><span class="cover-small">BUKU BELAJAR</span><span class="cover-title">Cerdas<br />Cermat</span><span class="cover-rule"></span><span class="cover-level">SD</span><span class="cover-author">BELAJAR · TUMBUH · SUKSES</span></div>
+          <div class="hero-shadow"></div>
+          <div class="art-caption"><span>01 / 04</span><span>SEBUAH BUKU, BANYAK CERITA</span></div>
+        </div>
+      </section>
+
+      <section class="library-section" id="rak">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> PILIH PERJALANANMU</div><h2>Rak buku <em>kecil kami.</em></h2></div><p>Setiap buku menyimpan tantangan seru<br class="desktop-break" /> yang menunggu untuk ditemukan.</p></div>
+        <div class="book-grid" id="book-grid" aria-live="polite"><div class="loading-books">Menyiapkan buku untukmu…</div></div>
+        <div class="shelf" aria-hidden="true"><div class="shelf-edge"></div><div class="shelf-front"></div></div>
+        <div class="library-foot"><span><span class="green-dot"></span> 4 jenjang tersedia</span><span>Pilih satu buku untuk mulai membaca <span aria-hidden="true">↗</span></span></div>
+      </section>
+
+      <section class="storybook-library" id="buku-cerita">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> BUKU KHUSUS</div><h2>Satu buku,<br class="story-title-break" /><em>enam petualangan.</em></h2></div><p>Buku cerita bergambar yang berdiri sendiri.<br class="desktop-break" /> Pilih jenjang untuk membuka kisahnya.</p></div>
+        <button class="storybook-card" id="open-storybook" type="button" aria-haspopup="dialog">
+          <span class="storybook-cover">
+            <span class="storybook-cover-spine">KISAH KECIL NUSANTARA</span>
+            <span class="storybook-cover-emblem" aria-hidden="true">✳</span>
+            <span class="storybook-cover-kicker">CERITA BERGAMBAR</span>
+            <span class="storybook-cover-title">Kisah Kecil<br /><em>Nusantara</em></span>
+            <span class="storybook-cover-rule"></span>
+            <span class="storybook-cover-topics">SEJARAH · ISLAM · NABI · A–Z · HEWAN</span>
+            <span class="storybook-cover-author">BELAJAR DARI CERITA</span>
+          </span>
+          <span class="storybook-card-copy"><strong>Kisah Kecil Nusantara</strong><span>TK · SD · SMP · SMA</span><small>6 tema · kisah dan ilustrasi di setiap bab</small></span>
+        </button>
+        <p class="storybook-library-note"><span class="green-dot"></span> Buku cerita terpisah dari buku latihan jenjang</p>
+      </section>
+
+      <section class="how-section" id="cara">
+        <div class="how-intro"><div class="eyebrow"><span class="eyebrow-line"></span> SESIMPLE MEMBUKA BUKU</div><h2>Belajar dengan<br /><em>caramu sendiri.</em></h2><p>Tak perlu terburu-buru. Baca, pikirkan, lalu pilih jawabanmu. Setiap halaman punya cerita dan skor tersendiri.</p></div>
+        <div class="steps"><article class="step"><span class="step-number">01</span><span class="step-icon">↗</span><h3>Pilih buku</h3><p>Sesuaikan jenjang dengan perjalanan belajarmu.</p></article><article class="step"><span class="step-number">02</span><span class="step-icon">⌁</span><h3>Buka lembar</h3><p>Balik halaman dengan tombol atau tombol panah di keyboard.</p></article><article class="step"><span class="step-number">03</span><span class="step-icon">✳</span><h3>Temukan jawaban</h3><p>Lihat hasil dan pembahasan langsung di bukumu.</p></article></div>
+      </section>
+
+      <section class="donation-section" id="donasi" aria-labelledby="donation-title">
+        <div class="donation-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> DUKUNG RUANG BELAJAR</div>
+          <h2 id="donation-title">Bantu ilmu terus <em>bertumbuh.</em></h2>
+          <p>“20ribu mu tidak akan membuatmu miskin seketika tapi ilmu yang akan kamu pelajari akan selamanya membuat mu kaya pengetahuan.”</p>
+        </div>
+        <div class="donation-card">
+          <span class="donation-label">DONASI MELALUI DANA</span>
+          <strong class="donation-number">087779026118</strong>
+          <button class="donation-copy-button" id="copy-donation-number" type="button">Salin nomor DANA</button>
+        </div>
+      </section>
+
+      <footer class="footer"><a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true">✳</span><span><strong>cerdas<span>cermat</span></strong><small>RUANG BELAJAR</small></span></a><span>Ruang kecil untuk rasa ingin tahu yang besar.</span><span>© 2026 Cerdas Cermat</span><span class="footer-credit">Dibuat oleh Satrio S Utomo</span></footer>
+    </main>
+
+    <div class="catalog-overlay" id="catalog-dialog" aria-hidden="true">
+      <section class="catalog-dialog" role="dialog" aria-modal="true" aria-labelledby="catalog-title">
+        <button class="catalog-close" id="close-catalog" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> SIAPKAN BUKUMU</div>
+        <h2 id="catalog-title">Pilih perjalanan <em>belajarmu.</em></h2>
+        <p class="catalog-intro" id="catalog-level-copy">Tentukan kurikulum dan fase sebelum membuka buku.</p>
+        <div class="catalog-fields">
+          <label>Kurikulum<select id="curriculum-select"></select></label>
+          <label id="phase-field-label"><span>Fase / kelas</span><select id="phase-select"></select></label>
+          <label id="subject-field-label"><span>Mata pelajaran</span><select id="subject-value"></select></label>
+          <label id="topic-field-label"><span>Materi</span><select id="topic-value"></select></label>
+        </div>
+        <p class="catalog-note" id="catalog-note">Setiap mapel memiliki kuis latihan 50 soal. Soal kuis dan ringkasan materi masih draf dan perlu ditelaah guru.</p>
+        <div class="catalog-actions"><button class="catalog-cancel" id="cancel-catalog" type="button">Kembali</button><button class="catalog-start" id="start-book" type="button">Buka buku <span aria-hidden="true">→</span></button></div>
+      </section>
+    </div>
+
+    <div class="catalog-overlay storybook-overlay" id="storybook-dialog" aria-hidden="true">
+      <section class="catalog-dialog storybook-dialog" role="dialog" aria-modal="true" aria-labelledby="storybook-title">
+        <button class="catalog-close" id="close-storybook" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> KISAH KECIL NUSANTARA</div>
+        <h2 id="storybook-title">Pilih jenjang dan <em>cerita.</em></h2>
+        <p class="catalog-intro" id="storybook-level-copy">Setiap jenjang memiliki cerita dengan bahasa dan kegiatan yang sesuai usia.</p>
+        <label class="storybook-level-field">Jenjang
+          <select id="storybook-level">
+            <option value="tk">TK · Fondasi</option><option value="sd">SD</option><option value="smp">SMP</option><option value="sma">SMA</option>
+          </select>
+        </label>
+        <div class="storybook-lessons" id="storybook-lessons" aria-live="polite"><p>Memuat daftar cerita…</p></div>
+        <p class="catalog-note">Bab agama umum menekankan syukur dan budi pekerti. Bab sejarah Islam dan kisah nabi dilengkapi rujukan ayat atau hadis; pelajari bersama guru atau keluarga.</p>
+        <div class="catalog-actions"><button class="catalog-cancel" id="cancel-storybook" type="button">Kembali</button><button class="catalog-start" id="start-storybook" type="button" disabled>Buka cerita <span aria-hidden="true">→</span></button></div>
+      </section>
+    </div>
+
+    <div class="reader-overlay" id="reader" role="dialog" aria-modal="true" aria-label="Buku belajar terbuka" aria-hidden="true">
+      <div class="reader-topbar"><button class="back-button" id="close-reader"><span aria-hidden="true">←</span> <span>Kembali ke rak</span></button><div class="reader-book-name"><span class="reader-mini-mark">✳</span><span id="reader-book-title">Cerdas Cermat</span><span class="reader-level-pill" id="reader-level">SD</span></div><div class="reader-top-actions"><button class="icon-button contents-toggle" id="contents-toggle" aria-label="Buka daftar isi" aria-expanded="false" title="Daftar isi">☷</button><button class="icon-button" id="font-toggle" aria-label="A+ Perbesar teks" title="Perbesar teks">A<span>+</span></button><button class="icon-button" id="sound-toggle" aria-label="Aktifkan suara halaman" title="Suara halaman">♫</button></div></div>
+      <div class="reader-body">
+        <div class="reader-context"><span class="context-kicker">SEDANG DIBACA</span><span id="reader-subject">Matematika</span><span class="context-progress"><span class="context-progress-fill" id="progress-fill"></span></span><span id="reader-progress-text">Halaman 1 dari 17 · 50 soal</span></div>
+        <div class="open-book" id="open-book" aria-label="Buku terbuka">
+          <div class="book-pages-shadow"></div>
+          <section class="left-page paper">
+            <div class="paper-running"><span>Daftar isi</span><span id="left-level-label">Kurikulum Merdeka</span></div>
+            <h2 class="contents-title">Di dalam<br /><em>buku ini</em></h2>
+            <div class="contents-list" id="contents-list"></div>
+            <div class="left-page-note"><span class="note-star">✳</span><span>Pelan-pelan saja.<br />Kamu sedang belajar.</span></div>
+            <span class="page-number left-page-number" id="left-page-number">ii</span>
+          </section>
+          <section class="right-page paper" id="right-page" aria-live="polite">
+            <div class="paper-running"><span id="page-book-label">Cerdas Cermat</span><span id="page-counter">Halaman 1</span></div>
+            <div class="page-heading"><span class="page-section-label" id="page-section-label">LEMBAR LATIHAN</span><span class="page-progress" id="page-progress-count">01 / 17</span></div>
+            <h2 class="quiz-page-title" id="quiz-page-title">Latihan Matematika</h2>
+            <div class="question-list" id="question-list"></div>
+            <div class="page-bottom"><span class="page-number" id="right-page-number">1</span></div>
+            <span class="page-instruction" id="page-instruction">Lingkari jawaban yang paling tepat.</span>
+          </section>
+          <div class="page-flip" id="page-flip" aria-hidden="true"><div class="flip-face flip-front"><div class="paper-running"><span id="flip-book-label">Cerdas Cermat</span><span>Halaman 1</span></div><div class="flip-content"></div><div class="page-bottom"><span>Terus semangat belajar!</span><span class="page-number">1</span></div></div><div class="flip-face flip-back"><span class="flip-back-mark">✳</span></div></div>
+          <div class="book-spine"></div>
+        </div>
+        <div class="reader-controls"><button class="turn-button previous" id="previous-page"><span aria-hidden="true">←</span><span>Sebelumnya</span></button><div class="reader-page-indicator"><span class="indicator-current" id="indicator-current">01</span><span class="indicator-divider">/</span><span id="indicator-total">17</span></div><button class="turn-button next" id="next-page"><span>Berikutnya</span><span aria-hidden="true">→</span></button><button class="turn-button finish" id="finish-quiz" hidden>Selesaikan kuis <span aria-hidden="true">✓</span></button><button class="turn-button" id="restart-quiz" type="button" hidden>Percobaan baru</button></div>
+        <div class="reader-hint"><span>↵</span> Gunakan panah kiri/kanan atau geser untuk membalik halaman</div>
+      </div>
+    </div>
+    <div class="results-overlay" id="results-dialog" aria-hidden="true">
+      <section class="results-dialog" role="dialog" aria-modal="true" aria-labelledby="results-title">
+        <button class="catalog-close" id="close-results" type="button" aria-label="Tutup hasil">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> HASIL BELAJAR</div>
+        <h2 id="results-title">Satu langkah <em>lebih maju.</em></h2>
+        <div class="result-score"><strong id="result-score">0</strong><span>nilai</span></div>
+        <p id="result-summary"></p><p class="result-recommendation" id="result-recommendation"></p>
+        <div class="catalog-actions"><button class="catalog-cancel" id="review-book" type="button">Tinjau jawaban</button><button class="catalog-start" id="finish-results" type="button">Kembali ke rak</button></div>
+      </section>
+    </div>
+    <div class="catalog-overlay utility-overlay" id="account-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <button class="catalog-close" id="close-account" type="button" aria-label="Tutup">×</button>
+        <div class="auth-brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 10c-4-3-8-4-14-3v22c6-1 10 0 14 3m0-22c4-3 8-4 14-3v22c-6-1-10 0-14 3m0-22v22"/></svg></div>
+        <div class="auth-kicker">RUANG BELAJAR CERDAS CERMAT</div>
+        <h2 id="account-title">Masuk atau <em>buat akun.</em></h2>
+        <p class="catalog-intro" id="account-copy">Masuk untuk melanjutkan perjalanan belajarmu.</p>
+        <div id="google-login-section" hidden>
+          <div id="google-login-button"></div>
+          <p id="google-login-note" class="google-login-note" role="status"></p>
+        </div>
+        <div class="auth-divider" id="account-auth-divider" hidden>atau lanjutkan dengan email</div>
+        <form id="account-form" class="utility-form">
+          <label id="account-name-label" hidden>Nama<input id="account-name" autocomplete="name" maxlength="80" placeholder="Nama lengkap" /></label>
+          <label>Email<input id="account-email" type="email" autocomplete="email" required maxlength="254" placeholder="nama@email.com" /></label>
+          <label>Kata sandi<input id="account-password" type="password" autocomplete="current-password" required minlength="10" maxlength="200" placeholder="Masukkan kata sandi" /></label>
+          <label id="account-role-field" hidden>Jenis akun<select id="account-role"><option value="student">Siswa</option><option value="teacher">Guru (perlu kode undangan)</option><option value="reviewer">Reviewer (perlu kode undangan)</option></select></label>
+          <label id="account-invite-field" hidden>Kode undangan<input id="account-invite" autocomplete="off" /></label>
+          <p id="account-error" class="form-error" role="alert"></p>
+          <div class="catalog-actions"><button class="catalog-start" type="submit" id="account-submit">Masuk ke akun</button><button class="catalog-cancel" id="account-mode-toggle" type="button">Belum punya akun? <span>Buat akun</span></button></div>
+        </form>
+        <div class="catalog-actions" id="account-session-actions" hidden><button class="catalog-cancel" id="account-logout" type="button">Keluar</button></div>
+      </section>
+    </div>
+    <div class="catalog-overlay utility-overlay" id="progress-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog" role="dialog" aria-modal="true" aria-labelledby="progress-title">
+        <button class="catalog-close" id="close-progress" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> RINGKASAN BELAJAR</div>
+        <h2 id="progress-title">Perjalanan <em>belajarmu.</em></h2>
+        <div id="progress-summary" class="progress-summary" aria-live="polite">Memuat progres…</div>
+        <h3>Latihan yang disarankan</h3><div id="recommendations-list" class="progress-summary"></div>
+        <section id="class-dashboard" hidden>
+          <h3>Ringkasan kelas</h3>
+          <label>Kelas yang ditugaskan<select id="class-dashboard-select"></select></label>
+          <div id="class-dashboard-summary" class="progress-summary" aria-live="polite"></div>
+        </section>
+        <section id="class-admin-tools" hidden>
+          <h3>Pengelolaan kelas</h3>
+          <div class="utility-form">
+            <label>ID kelas<input id="new-class-id" maxlength="80" placeholder="contoh: kelas-5a" /></label>
+            <label>Nama kelas<input id="new-class-name" maxlength="120" placeholder="contoh: Kelas 5A" /></label>
+            <button class="catalog-cancel" id="create-class" type="button">Buat kelas</button>
+          </div>
+          <label>Guru kelas<select id="class-teachers" multiple size="4"></select></label>
+          <label>Siswa kelas<select id="class-students" multiple size="6"></select></label>
+          <button class="catalog-start" id="save-class-members" type="button">Simpan penugasan</button>
+        </section>
+        <h3>Muatan lokal sekolah</h3><div class="utility-form"><label>Kode sekolah<input id="school-code" maxlength="80" placeholder="contoh: sd-cerdas" /></label><button class="catalog-cancel" id="load-school-catalog" type="button">Tampilkan pilihan sekolah</button></div><div id="school-subject-list" class="progress-summary" aria-live="polite"></div><button class="catalog-start" id="save-school-catalog" type="button" hidden>Simpan pilihan muatan lokal</button>
+        <div class="catalog-actions"><button class="catalog-cancel" id="close-progress-action" type="button">Tutup</button><button class="catalog-start" id="clear-progress" type="button">Hapus progres saya</button></div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-message"></span><button id="toast-retry" type="button" hidden>Coba lagi</button></div>
+  </body>
+</html>

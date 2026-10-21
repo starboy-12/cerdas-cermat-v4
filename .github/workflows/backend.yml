@@ -1,0 +1,43 @@
+name: backend-and-frontend
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+      - name: Check backend syntax
+        working-directory: backend
+        run: npm run lint
+      - name: Run API and storage tests
+        working-directory: backend
+        run: npm test
+      - name: Check frontend syntax
+        working-directory: frontend
+        run: npm run lint
+      - name: Build frontend static bundle
+        working-directory: frontend
+        run: npm run build
+      - name: Install frontend test dependencies
+        working-directory: frontend
+        run: npm install
+      - name: Run frontend component tests
+        working-directory: frontend
+        run: npm test
+      - name: Install Chromium for UI tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run browser flow tests
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Validate OpenAPI JSON
+        run: node -e "const spec = require('./backend/openapi.json'); if (spec.openapi !== '3.1.0' || !Object.keys(spec.paths).length) process.exit(1)"

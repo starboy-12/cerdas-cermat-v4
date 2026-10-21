@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">Peta ilustratif hijrah dari Makkah ke Madinah</title>
+  <desc id="desc">Bentang gurun bergaya buku cerita dengan penanda Makkah dan Madinah yang tersambung jalur titik, tanpa sosok manusia.</desc>
+  <defs>
+    <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#f6efd9"/><stop offset="1" stop-color="#e7dcc0"/></linearGradient>
+    <linearGradient id="dune" x2="0" y2="1"><stop stop-color="#c7a86e"/><stop offset="1" stop-color="#ad8955"/></linearGradient>
+    <pattern id="grain" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".7" fill="#9c895f" opacity=".17"/><circle cx="12" cy="11" r=".55" fill="#9c895f" opacity=".12"/></pattern>
+  </defs>
+  <rect width="1200" height="380" rx="18" fill="url(#paper)"/>
+  <rect width="1200" height="380" rx="18" fill="url(#grain)"/>
+  <path d="M0 278 Q170 226 350 271 T710 267 T1200 251 V380 H0Z" fill="#d7c395" opacity=".65"/>
+  <path d="M0 317 Q200 267 390 305 T800 294 T1200 281 V380 H0Z" fill="url(#dune)" opacity=".58"/>
+  <path d="M0 345 Q190 311 390 334 T810 324 T1200 311 V380 H0Z" fill="#9f8155" opacity=".28"/>
+  <path d="M290 212 C430 80 760 77 927 194" fill="none" stroke="#8d774e" stroke-width="4" stroke-dasharray="3 15" stroke-linecap="round"/>
+  <path d="M905 183l24 11-18 20" fill="none" stroke="#8d774e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="290" cy="212" r="13" fill="#9f5a43" stroke="#fff9e8" stroke-width="6"/>
+  <circle cx="927" cy="194" r="13" fill="#486b54" stroke="#fff9e8" stroke-width="6"/>
+  <g fill="#876e4a" opacity=".82">
+    <path d="M221 269h91v-48h-91zM236 221v-30h61v30M250 191v-19h33v19M259 172v-12h15v12"/>
+    <path d="M873 259h112v-52h-112zM889 207v-35h80v35M908 172v-23h42v23M920 149v-13h19v13"/>
+    <path d="M207 270v-63h8v63M315 270v-63h8v63M859 260v-68h9v68M989 260v-68h9v68"/>
+  </g>
+  <g fill="#607956" opacity=".78"><path d="M1040 282c8-36 8-65 1-91 16 15 24 29 26 47 7-20 17-33 31-42-4 22-14 39-29 53 17-7 34-8 51-4-20 12-40 17-60 15 0 9 0 16 2 22z"/><path d="M1094 286c5-23 5-41 0-58 11 10 16 19 18 30 5-13 11-22 20-28-3 15-9 26-19 35 12-5 23-5 34-2-13 8-27 11-40 10 0 5 0 9 1 13z"/></g>
+  <g fill="#574e3b" font-family="Georgia,serif" text-anchor="middle">
+    <text x="290" y="320" font-size="22" letter-spacing="2">MAKKAH</text>
+    <text x="927" y="311" font-size="22" letter-spacing="2">MADINAH</text>
+    <text x="608" y="92" font-size="17" font-style="italic" letter-spacing="2">SEBUAH PERJALANAN PENUH HARAPAN</text>
+  </g>
+  <g transform="translate(105 77)" fill="none" stroke="#8c7449" stroke-width="3" opacity=".62"><circle r="26"/><path d="M0-18V18M-18 0H18M-13-13l26 26M13-13l-26 26"/></g>
+  <path d="M1110 76c-16 14-21 37-9 55 12 19 38 23 55 11-10 2-21-1-28-10-13-15-7-39 8-51-9-5-17-6-26-5z" fill="#9f8050" opacity=".7"/>
+</svg>

@@ -1,0 +1,1507 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cerdas Cermat API",
+    "version": "1.0.0",
+    "description": "API katalog belajar, progres, autentikasi, konten, dan muatan lokal sekolah. Semua fitur memerlukan sesi kecuali health, OpenAPI, konfigurasi login, pendaftaran, dan login."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "security": [],
+        "summary": "Status layanan dan koneksi penyimpanan",
+        "responses": {
+          "200": {
+            "description": "API dan penyimpanan aktif."
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "summary": "Daftar jenjang dan kurikulum",
+        "responses": {
+          "200": {
+            "description": "Katalog publik."
+          }
+        }
+      }
+    },
+    "/books": {
+      "get": {
+        "summary": "Alias kompatibilitas katalog",
+        "responses": {
+          "200": {
+            "description": "Daftar jenjang dan kurikulum."
+          }
+        }
+      }
+    },
+    "/catalog/validate": {
+      "get": {
+        "summary": "Validasi struktur seluruh katalog dan bank soal",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/catalog/{level}/subjects": {
+      "get": {
+        "summary": "Mapel, topik, dan relasi kuis untuk fase",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Level"
+          },
+          {
+            "name": "curriculum",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phase",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Katalog fase."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/materials/{level}/{subject}/{topic}/pages/{number}": {
+      "get": {
+        "summary": "Halaman materi",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Level"
+          },
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "name": "curriculum",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phase",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Materi dan halaman."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/quizzes/{level}/{subject}/pages/{number}": {
+      "get": {
+        "summary": "Halaman kuis tanpa kunci jawaban",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Level"
+          },
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "name": "curriculum",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phase",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Soal dan pilihan jawaban."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/books/{id}/pages/{number}": {
+      "get": {
+        "summary": "Alias kompatibilitas paket Matematika",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Halaman soal."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/storybook": {
+      "get": {
+        "summary": "Daftar buku cerita",
+        "responses": {
+          "200": {
+            "description": "Katalog cerita."
+          }
+        }
+      }
+    },
+    "/storybook/{level}": {
+      "get": {
+        "summary": "Daftar cerita per jenjang",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Level"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Katalog cerita jenjang."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/storybook/{level}/pages/{number}": {
+      "get": {
+        "summary": "Halaman buku cerita",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Level"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Halaman cerita."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "security": [],
+        "summary": "Dokumen OpenAPI",
+        "responses": {
+          "200": {
+            "description": "Spesifikasi API versi OpenAPI 3.1."
+          }
+        }
+      }
+    },
+    "/progress/{studentId}": {
+      "get": {
+        "summary": "Ambil progres, riwayat, progres per topik, atau satu paket",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Student"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progres siswa."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Hapus progres, jawaban, dan riwayat",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Student"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progres dihapus."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/progress": {
+      "put": {
+        "summary": "Simpan halaman progres kuis",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Progress"
+        },
+        "responses": {
+          "200": {
+            "description": "Tersimpan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/reading-progress": {
+      "put": {
+        "summary": "Simpan halaman terakhir dibaca",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ReadingProgress"
+        },
+        "responses": {
+          "200": {
+            "description": "Tersimpan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/reading-progress/{studentId}": {
+      "get": {
+        "summary": "Ambil posisi baca",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Student"
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posisi baca."
+          }
+        }
+      }
+    },
+    "/answer": {
+      "post": {
+        "summary": "Periksa dan simpan jawaban",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Answer"
+        },
+        "responses": {
+          "200": {
+            "description": "Hasil pemeriksaan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sync/progress": {
+      "post": {
+        "summary": "Simpan batch progres offline secara atomik",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "operations"
+                ],
+                "properties": {
+                  "operations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "path",
+                        "body"
+                      ],
+                      "properties": {
+                        "path": {
+                          "enum": [
+                            "/api/answer",
+                            "/api/progress",
+                            "/api/reading-progress"
+                          ]
+                        },
+                        "body": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Seluruh perubahan disimpan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/results": {
+      "post": {
+        "summary": "Simpan hasil hanya setelah seluruh soal dijawab",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/QuizContext"
+        },
+        "responses": {
+          "200": {
+            "description": "Hasil final."
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/attempts": {
+      "post": {
+        "summary": "Mulai percobaan baru tanpa menghapus hasil lama",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/QuizContext"
+        },
+        "responses": {
+          "201": {
+            "description": "Percobaan dimulai."
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "security": [],
+        "summary": "Daftar akun siswa atau akun guru/reviewer berundangan",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Register"
+        },
+        "responses": {
+          "201": {
+            "description": "Akun dan sesi dibuat."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "security": [],
+        "summary": "Masuk",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Login"
+        },
+        "responses": {
+          "200": {
+            "description": "Token sesi dan profil."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Akhiri sesi",
+        "responses": {
+          "200": {
+            "description": "Sesi berakhir."
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Profil akun aktif",
+        "responses": {
+          "200": {
+            "description": "Profil akun."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/content": {
+      "get": {
+        "summary": "Daftar konten publik atau antrean reviewer",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar dokumen konten."
+          }
+        }
+      },
+      "post": {
+        "summary": "Buat draf konten",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Content"
+        },
+        "responses": {
+          "201": {
+            "description": "Draf dibuat."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/content/{id}": {
+      "get": {
+        "summary": "Ambil dokumen dan riwayat",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dokumen."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit konten dan buat revisi",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Content"
+        },
+        "responses": {
+          "200": {
+            "description": "Revisi tersimpan."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Hapus draf sebagai admin",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dokumen dihapus."
+          }
+        }
+      }
+    },
+    "/content/{id}/{action}": {
+      "post": {
+        "summary": "Transisi workflow atau komentar reviewer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "submit",
+                "approve",
+                "publish",
+                "reject",
+                "revise",
+                "comments"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Comment"
+        },
+        "responses": {
+          "200": {
+            "description": "Workflow diperbarui."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/schools/{schoolId}/catalog": {
+      "get": {
+        "summary": "Muatan lokal yang diterbitkan untuk sekolah",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/School"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar pilihan sekolah."
+          }
+        }
+      },
+      "put": {
+        "summary": "Konfigurasi pilihan sekolah oleh admin",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/School"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SchoolCatalog"
+        },
+        "responses": {
+          "200": {
+            "description": "Konfigurasi disimpan."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/schools/{schoolId}/materials/{contentId}/pages/{number}": {
+      "get": {
+        "summary": "Halaman materi muatan lokal terpilih",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/School"
+          },
+          {
+            "$ref": "#/components/parameters/SchoolContentId"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Halaman materi lokal."
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/media": {
+      "get": {
+        "summary": "Daftar metadata media berlisensi",
+        "responses": {
+          "200": {
+            "description": "Metadata media."
+          }
+        }
+      },
+      "post": {
+        "summary": "Daftarkan metadata lisensi media",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Media"
+        },
+        "responses": {
+          "201": {
+            "description": "Metadata tersimpan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/media/{id}": {
+      "put": {
+        "summary": "Perbarui metadata media",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata diperbarui."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Arsipkan metadata media",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata diarsipkan."
+          }
+        }
+      }
+    },
+    "/analytics/class": {
+      "get": {
+        "summary": "Agregat kelas yang ditugaskan tanpa nama siswa",
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ringkasan kelas."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/classes": {
+      "get": {
+        "summary": "Daftar kelas yang ditugaskan atau semua kelas untuk admin",
+        "responses": {
+          "200": {
+            "description": "Daftar kelas."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Buat kelas sebagai admin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Kelas dibuat."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/classes/{classId}/members": {
+      "put": {
+        "summary": "Atur penugasan guru dan siswa sebagai admin",
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "teacherIds",
+                  "studentIds"
+                ],
+                "properties": {
+                  "teacherIds": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "studentIds": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Penugasan disimpan."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/accounts": {
+      "get": {
+        "summary": "Daftar akun untuk pengelolaan kelas oleh admin",
+        "responses": {
+          "200": {
+            "description": "Daftar akun tanpa kredensial."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/recommendations/{studentId}": {
+      "get": {
+        "summary": "Rekomendasi latihan dari riwayat penguasaan",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Student"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar rekomendasi."
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Metrik internal admin",
+        "responses": {
+          "200": {
+            "description": "Metrik layanan."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/config": {
+      "get": {
+        "security": [],
+        "summary": "Konfigurasi penyedia login yang tersedia",
+        "responses": {
+          "200": {
+            "description": "Status dan Client ID Google (jika dikonfigurasi)."
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "security": [],
+        "summary": "Verifikasi ID token Google dan buat sesi",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "credential"
+                ],
+                "properties": {
+                  "credential": {
+                    "type": "string",
+                    "maxLength": 10000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token sesi dan profil akun."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "parameters": {
+      "Level": {
+        "name": "level",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "tk",
+            "sd",
+            "smp",
+            "sma"
+          ]
+        }
+      },
+      "Page": {
+        "name": "number",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "Student": {
+        "name": "studentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 80
+        }
+      },
+      "ContentId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "maxLength": 120
+        }
+      },
+      "SchoolContentId": {
+        "name": "contentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "maxLength": 120
+        }
+      },
+      "School": {
+        "name": "schoolId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "QuizContext": {
+        "type": "object",
+        "required": [
+          "studentId",
+          "bookId",
+          "curriculum",
+          "phase"
+        ],
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "minLength": 8
+          },
+          "bookId": {
+            "type": "string"
+          },
+          "curriculum": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          }
+        }
+      },
+      "Content": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "type",
+          "title",
+          "curriculum",
+          "level",
+          "phase",
+          "subjectId",
+          "topicId",
+          "objectives",
+          "sources"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "enum": [
+              "material",
+              "quiz",
+              "local-subject",
+              "lesson"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "in_review",
+              "approved",
+              "rejected",
+              "published",
+              "archived"
+            ]
+          },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "title",
+                "url"
+              ]
+            }
+          },
+          "reviewer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Question": {
+        "type": "object",
+        "required": [
+          "id",
+          "prompt",
+          "choices",
+          "answer",
+          "difficulty",
+          "explanation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": {
+              "type": "string"
+            }
+          },
+          "answer": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "difficulty": {
+            "enum": [
+              "mudah",
+              "sedang",
+              "sulit"
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "requestBodies": {
+      "Progress": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/QuizContext"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "page"
+                  ],
+                  "properties": {
+                    "page": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ReadingProgress": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "studentId",
+                "key",
+                "page"
+              ],
+              "properties": {
+                "studentId": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 240
+                },
+                "page": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "Answer": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/QuizContext"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "questionId",
+                    "choice"
+                  ],
+                  "properties": {
+                    "questionId": {
+                      "type": "string"
+                    },
+                    "choice": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Content": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Content"
+            }
+          }
+        }
+      },
+      "Register": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "name",
+                "email",
+                "password"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "password": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 200
+                },
+                "role": {
+                  "enum": [
+                    "student",
+                    "teacher",
+                    "reviewer"
+                  ]
+                },
+                "inviteCode": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Login": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "email",
+                "password"
+              ],
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SchoolCatalog": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "contentIds"
+              ],
+              "properties": {
+                "contentIds": {
+                  "type": "array",
+                  "maxItems": 100,
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Media": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "uri",
+                "altText",
+                "licenseName",
+                "sourceUri"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "uri": {
+                  "type": "string"
+                },
+                "altText": {
+                  "type": "string"
+                },
+                "licenseName": {
+                  "type": "string"
+                },
+                "licenseUri": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "sourceUri": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "creator": {
+                  "type": "string"
+                },
+                "reviewer": {
+                  "type": "string"
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "enum": [
+                    "draft",
+                    "published",
+                    "archived"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "Comment": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "comment": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Kesalahan API tersandar dengan request id.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Validation": {
+        "description": "Status validasi katalog.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "valid",
+                "issues"
+              ],
+              "properties": {
+                "valid": {
+                  "type": "boolean"
+                },
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

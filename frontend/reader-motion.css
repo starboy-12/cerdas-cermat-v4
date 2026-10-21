@@ -1,0 +1,27 @@
+.reader-overlay.is-open .open-book {
+  animation: book-opening 620ms cubic-bezier(.2, .78, .23, 1) both;
+}
+
+@keyframes book-opening {
+  from { transform: perspective(1800px) rotateY(-40deg) scale(.91); opacity: .35; }
+  to { transform: perspective(1800px) rotateY(0) scale(1); opacity: 1; }
+}
+
+.page-flip.backwards.is-flipping {
+  animation-name: turn-backward;
+}
+
+@keyframes turn-backward {
+  from { transform: rotateY(0); }
+  to { transform: rotateY(180deg); }
+}
+
+.sound-on {
+  color: #46694e;
+  border-color: #91a18b;
+  background: #edf0e9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-overlay.is-open .open-book { animation: none; }
+}
