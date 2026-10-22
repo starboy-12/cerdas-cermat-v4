@@ -20,6 +20,23 @@ test.beforeEach(async ({ page }) => {
   }, { apiURL, token: account.token, user: account.user });
 });
 
+test('kurikulum arsip memilih kelas sesuai jenjang dan menjalankan kuis dasar', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('[data-book="sd"]').click();
+  await expect(page.locator('#catalog-dialog')).toHaveClass(/is-open/);
+  await page.locator('#curriculum-select').selectOption('ktsp');
+  await expect(page.locator('#phase-select option')).toHaveCount(6);
+  await expect(page.locator('#phase-select option').first()).toHaveText('Kelas 1');
+  await page.locator('#phase-select').selectOption('kelas-1');
+  await page.locator('#subject-value').selectOption('matematika');
+  await page.locator('#topic-value').selectOption('kuis-50');
+  await expect(page.locator('#catalog-level-copy')).toContainText('Kelas 1');
+  await page.locator('#start-book').click();
+  await expect(page.locator('#reader')).toHaveClass(/is-open/);
+  await expect(page.locator('#question-list .question').first()).toBeVisible();
+  await expect(page.locator('#question-list')).not.toContainText(/turunan|vektor|sin |cos /i);
+});
+
 test('materi membuka kuis terkait dan hasil hanya muncul setelah 50 jawaban', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-book="sd"]')).toBeVisible();

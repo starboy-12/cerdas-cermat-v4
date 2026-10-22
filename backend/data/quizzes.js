@@ -1,5 +1,5 @@
 const { books } = require('./books');
-const { catalogFor } = require('./curriculum-catalog');
+const { catalogFor, gradeForPhase } = require('./curriculum-catalog');
 
 const PAGE_SIZE = 3;
 const QUESTION_COUNT = 50;
@@ -179,37 +179,96 @@ function languageQuestion(subject, topic, index, round) {
   return compose(`Dalam ${context}, pada materi ${topic.toLowerCase()}, ketika ${activity}, tindakan yang paling membantu adalah …`, options[0], options.slice(1), `Cara tersebut membantu pembaca atau pendengar memahami ${topic.toLowerCase()} dengan lebih tepat.`);
 }
 
-function advancedMathQuestion(topic, index, random) {
-  const type = index % 5;
-  if (type === 0) {
-    const coefficient = 2 + Math.floor(random() * 6);
-    const offset = Math.floor(random() * 13) - 6;
-    const x = 1 + Math.floor(random() * 5);
-    const answer = coefficient * x + offset;
-    return compose(`Untuk ${topic.toLowerCase()}, jika f(x) = ${coefficient}x ${offset < 0 ? `− ${Math.abs(offset)}` : `+ ${offset}`}, berapakah f(${x})?`, answer, [answer + coefficient, answer - coefficient, coefficient * (x + offset)], `Substitusi x = ${x}: f(${x}) = ${coefficient} × ${x} ${offset < 0 ? `− ${Math.abs(offset)}` : `+ ${offset}`} = ${answer}.`);
+function advancedMathQuestion(topic, index, random, level, curriculum, phase) {
+  const grade = gradeForPhase(level, phase, curriculum);
+  const type = index % 4;
+  if (level === 'sd' && grade <= 2) {
+    const limit = grade === 1 ? 10 : 50;
+    const first = 1 + Math.floor(random() * (limit / 2));
+    const second = 1 + Math.floor(random() * (limit / 2));
+    if (type === 1) {
+      const answer = first + second;
+      return compose(`Ada ${first} benda. Ditambah ${second} benda. Berapa jumlahnya?`, answer, [answer + 1, Math.max(0, answer - 1), answer + 2], `${first} + ${second} = ${answer}.`);
+    }
+    if (type === 2) {
+      const larger = Math.max(first, second);
+      const smaller = Math.min(first, second);
+      const answer = larger - smaller;
+      return compose(`Ada ${larger} benda. ${smaller} benda diberikan. Berapa yang tersisa?`, answer, [answer + 1, answer + 2, Math.max(0, answer - 1)], `${larger} − ${smaller} = ${answer}.`);
+    }
+    const answer = first + second;
+    return compose(`Bilangan setelah ${answer - 1} adalah …`, answer, [answer + 1, Math.max(0, answer - 2), answer + 2], `Bilangan setelah ${answer - 1} adalah ${answer}.`);
   }
-  if (type === 1) {
-    const angle = [0, 30, 45, 60, 90][Math.floor(random() * 5)];
+  if (level === 'sd' && grade <= 4) {
+    const limit = grade === 3 ? 500 : 2000;
+    const first = 10 + Math.floor(random() * limit);
+    const second = 2 + Math.floor(random() * 12);
+    if (type === 0) {
+      const answer = first + second;
+      return compose(`Hasil dari ${first} + ${second} adalah …`, answer, [answer + 1, answer - 1, answer + 10], `${first} + ${second} = ${answer}.`);
+    }
+    if (type === 1) {
+      const answer = first * second;
+      return compose(`Hasil dari ${first} × ${second} adalah …`, answer, [answer + second, answer - second, first + second], `${first} × ${second} = ${answer}.`);
+    }
+    const dividend = second * (2 + Math.floor(random() * 12));
+    const answer = dividend / second;
+    return compose(`Hasil dari ${dividend} ÷ ${second} adalah …`, answer, [answer + 1, answer - 1, answer + second], `${dividend} ÷ ${second} = ${answer}.`);
+  }
+  if (level === 'sd') {
+    if (type === 0) {
+      const length = 3 + Math.floor(random() * 15);
+      const width = 2 + Math.floor(random() * 10);
+      const answer = length * width;
+      return compose(`Luas persegi panjang dengan panjang ${length} cm dan lebar ${width} cm adalah …`, `${answer} cm²`, [`${answer + length} cm²`, `${2 * (length + width)} cm²`, `${answer - width} cm²`], `Luas = panjang × lebar = ${length} × ${width} = ${answer} cm².`);
+    }
+    if (type === 1) {
+      const denominator = 2 + Math.floor(random() * 6);
+      const first = 1 + Math.floor(random() * (denominator - 1));
+      const second = 1 + Math.floor(random() * (denominator - first));
+      const answer = `${first + second}/${denominator}`;
+      return compose(`Hasil dari ${first}/${denominator} + ${second}/${denominator} adalah …`, answer, [`${first + second}/${denominator + 1}`, `${Math.abs(first - second)}/${denominator}`, `${first + second + 1}/${denominator}`], `Penyebut sama, jadi jumlahkan pembilang: ${first}/${denominator} + ${second}/${denominator} = ${answer}.`);
+    }
+    const value = 10 + Math.floor(random() * 90);
+    const answer = Math.round(value * 0.1);
+    return compose(`Berapakah 10% dari ${value}?`, answer, [answer + 1, answer + 5, Math.max(0, answer - 1)], `10% = 1/10, jadi ${value} ÷ 10 = ${answer}.`);
+  }
+  if (level === 'smp' && grade <= 7) {
+    const first = 5 + Math.floor(random() * 20);
+    const second = 2 + Math.floor(random() * 10);
+    const answer = type === 0 ? first + second : type === 1 ? first - second : first * second;
+    const operation = type === 0 ? '+' : type === 1 ? '−' : '×';
+    return compose(`Hasil dari ${first} ${operation} ${second} adalah …`, answer, [answer + 1, answer - 1, answer + second], `${first} ${operation} ${second} = ${answer}.`);
+  }
+  if (level === 'smp' || level === 'sma' && grade <= 10) {
+    const coefficient = 2 + Math.floor(random() * 8);
+    const solution = 1 + Math.floor(random() * 12);
+    const offset = 1 + Math.floor(random() * 15);
+    const result = coefficient * solution + offset;
+    return compose(`Jika ${coefficient}x + ${offset} = ${result}, nilai x adalah …`, solution, [solution + 1, solution - 1, solution + 2], `${coefficient}x = ${result} − ${offset} = ${coefficient * solution}, jadi x = ${solution}.`);
+  }
+  if (level === 'sma' && grade === 11 && type < 2) {
+    const angle = [30, 45, 60][Math.floor(random() * 3)];
     const isCos = random() >= 0.5;
     const values = isCos
-      ? { 0: '1', 30: '√3/2', 45: '√2/2', 60: '1/2', 90: '0' }
-      : { 0: '0', 30: '1/2', 45: '√2/2', 60: '√3/2', 90: '1' };
+      ? { 30: '√3/2', 45: '√2/2', 60: '1/2' }
+      : { 30: '1/2', 45: '√2/2', 60: '√3/2' };
     const answer = values[angle];
-    return compose(`Nilai ${isCos ? 'cos' : 'sin'} ${angle}° pada ${topic.toLowerCase()} adalah …`, answer, ['0', '1/2', '√2/2', '√3/2', '1'].filter((value) => value !== answer).slice(0, 3), `Nilai ${isCos ? 'cos' : 'sin'} ${angle}° adalah ${answer}.`);
+    return compose(`Nilai ${isCos ? 'cos' : 'sin'} ${angle}° adalah …`, answer, ['0', '1/2', '√2/2', '√3/2', '1'].filter((value) => value !== answer).slice(0, 3), `${isCos ? 'cos' : 'sin'} ${angle}° = ${answer}.`);
   }
-  if (type === 2) {
+  if (level === 'sma' && grade >= 12 && type === 0) {
+    const coefficient = 1 + Math.floor(random() * 6);
+    const power = 2 + Math.floor(random() * 3);
+    const answer = `${coefficient * power}x^${power - 1}`;
+    return compose(`Turunan dari ${coefficient}x^${power} adalah …`, answer, [`${coefficient}x^${power - 1}`, `${coefficient * power}x^${power}`, `${coefficient * (power - 1)}x^${power}`], `Dengan aturan pangkat, turunan ax^n adalah an x^(n−1), sehingga hasilnya ${answer}.`);
+  }
+  if (level === 'sma' && grade >= 11 && type === 1) {
     const a = Math.floor(random() * 9) - 4;
     const b = Math.floor(random() * 9) - 4;
     const c = Math.floor(random() * 9) - 4;
     const d = Math.floor(random() * 9) - 4;
     const answer = `(${a + c}, ${b + d})`;
-    return compose(`Hasil penjumlahan vektor (${a}, ${b}) + (${c}, ${d}) pada ${topic.toLowerCase()} adalah …`, answer, [`(${a + c}, ${b - d})`, `(${a - c}, ${b + d})`, `(${b + d}, ${a + c})`], `Jumlahkan komponen sejenis: (${a} + ${c}, ${b} + ${d}) = ${answer}.`);
-  }
-  if (type === 3) {
-    const coefficient = 1 + Math.floor(random() * 6);
-    const power = 2 + Math.floor(random() * 4);
-    const answer = `${coefficient * power}x^${power - 1}`;
-    return compose(`Turunan dari ${coefficient}x^${power} pada ${topic.toLowerCase()} adalah …`, answer, [`${coefficient}x^${power - 1}`, `${coefficient * power}x^${power}`, `${coefficient * (power - 1)}x^${power}`], `Gunakan aturan pangkat: turunan ax^n adalah an x^(n−1), sehingga hasilnya ${answer}.`);
+    return compose(`Hasil penjumlahan vektor (${a}, ${b}) + (${c}, ${d}) adalah …`, answer, [`(${a + c}, ${b - d})`, `(${a - c}, ${b + d})`, `(${b + d}, ${a + c})`], `Jumlahkan komponen sejenis: (${a} + ${c}, ${b} + ${d}) = ${answer}.`);
   }
   const red = 1 + Math.floor(random() * 5);
   const blue = 2 + Math.floor(random() * 6);
@@ -217,7 +276,7 @@ function advancedMathQuestion(topic, index, random) {
   const common = divisor(red, red + blue);
   const answer = `${red / common}/${(red + blue) / common}`;
   const distractors = [`${blue}/${red + blue}`, `1/${red + blue}`, `${red}/${red + blue}`].filter((value) => value !== answer);
-  return compose(`Di dalam wadah ada ${red} benda merah dan ${blue} benda biru. Peluang mengambil benda merah pada ${topic.toLowerCase()} adalah …`, answer, distractors, `Peluang = banyak hasil yang diinginkan ÷ jumlah seluruh hasil = ${red}/${red + blue} = ${answer}.`);
+  return compose(`Di dalam wadah ada ${red} benda merah dan ${blue} benda biru. Peluang mengambil benda merah adalah …`, answer, distractors, `Peluang = banyak hasil yang diinginkan ÷ jumlah seluruh hasil = ${red}/${red + blue} = ${answer}.`);
 }
 
 function createDraftQuestion({ level, phase, curriculum, subject, topic, index }) {
@@ -226,7 +285,7 @@ function createDraftQuestion({ level, phase, curriculum, subject, topic, index }
   const round = Math.floor(index / 10);
   let item;
   if (family === 'math') {
-    item = advancedMathQuestion(topic, index, random);
+    item = advancedMathQuestion(topic, index, random, level, curriculum, phase);
   } else if (family === 'language') {
     item = languageQuestion(subject, topic, index, round);
   } else if (scenarios[family]) {
@@ -284,13 +343,15 @@ function quizFor(levelId, curriculum, phaseId, subjectId) {
   const subject = catalog?.subjects.find((item) => item.id === subjectId);
   if (!book || !subject) return null;
   const isMath = subjectId === 'matematika';
-  const generatedQuestions = isMath
-    ? book.questions
-    : Array.from({ length: QUESTION_COUNT }, (_, index) => createDraftQuestion({
+  const generatedQuestions = Array.from({ length: QUESTION_COUNT }, (_, index) => {
+    const question = createDraftQuestion({
       level: levelId, phase: phaseId, curriculum, subject,
       topic: subject.topics[index % subject.topics.length].title,
       index,
-    }));
+    });
+    if (isMath) question.id = book.questions[index].id;
+    return question;
+  });
   const questions = generatedQuestions.map((question, index) => ({
     ...question,
     difficulty: index % 3 === 0 ? 'mudah' : index % 3 === 1 ? 'sedang' : 'sulit',

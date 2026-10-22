@@ -1,7 +1,8 @@
-const CACHE = 'cerdas-cermat-shell-v1';
+const CACHE = 'cerdas-cermat-shell-v4';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/book-layout.css', '/storybook.css',
-  '/reader-motion.css', '/config.js', '/app.js', '/manifest.webmanifest',
+  '/reader-motion.css', '/config.js?v=2', '/app.js?v=3', '/manifest.webmanifest',
+  '/assets/dana-qr.svg',
   '/assets/storybook/ATTRIBUTIONS.md', '/assets/storybook/animals-habitat.jpg',
   '/assets/storybook/alphabet-animals.png', '/assets/storybook/values-sharing.png',
   '/assets/storybook/history-scroll.jpg', '/assets/storybook/prophets-symbols.svg',
@@ -22,7 +23,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then((response) => {
       const copy = response.clone(); caches.open(CACHE).then((cache) => cache.put('/index.html', copy)); return response;

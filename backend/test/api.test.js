@@ -82,6 +82,19 @@ test('API memvalidasi katalog, progres, autentikasi, dan workflow review', async
   const catalog = await call('/catalog');
   assert.equal(catalog.status, 200);
   assert.equal(catalog.body.books.length, 4);
+  assert.ok(catalog.body.curricula.some((item) => item.id === 'kbk' && item.name === 'Kurikulum 2004 (KBK)'));
+  assert.ok(catalog.body.curricula.some((item) => item.id === 'ktsp' && item.name === 'Kurikulum 2006 (KTSP)'));
+  const sdBook = catalog.body.books.find((book) => book.id === 'sd');
+  assert.deepEqual(sdBook.curriculumPhases.k13.map((phase) => phase.id), ['kelas-1', 'kelas-2', 'kelas-3', 'kelas-4', 'kelas-5', 'kelas-6']);
+  assert.deepEqual(sdBook.curriculumPhases.merdeka.map((phase) => phase.id), ['a', 'b', 'c']);
+  assert.equal((await call('/catalog/sd/subjects?curriculum=ktsp&phase=kelas-7')).status, 404, 'kelas SMP tidak boleh dipilih pada buku SD');
+  for (const [curriculum, phase] of [['kbk', 'kelas-1'], ['ktsp', 'kelas-1']]) {
+    const legacyCatalog = await call(`/catalog/sd/subjects?curriculum=${curriculum}&phase=${phase}`);
+    assert.equal(legacyCatalog.status, 200);
+    assert.equal(legacyCatalog.body.phase.label, 'Kelas 1');
+    assert.ok(legacyCatalog.body.subjects.some((subject) => subject.id === 'matematika'));
+    assert.equal((await call(`/quizzes/sd/matematika/pages/1?curriculum=${curriculum}&phase=${phase}`)).status, 200);
+  }
   const validation = await call('/catalog/validate');
   assert.equal(validation.status, 200, validation.body.issues?.slice(0, 3).join('; '));
 

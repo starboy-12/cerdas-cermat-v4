@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#e9e8e1" />
-    <meta name="api-base-url" content="http://localhost:3101/api" />
-    <meta name="description" content="Buka buku Cerdas Cermat dan belajar sambil bermain." />
+    <meta name="api-base-url" content="" />
+    <meta name="description" content="Buka buku Cerdas Cermat dan belajar sambil bermain. Ruang perpustakaan belajar interaktif dengan latihan kuis dan buku cerita bergambar." />
+    <meta property="og:title" content="Cerdas Cermat · Perpustakaan Belajar" />
+    <meta property="og:description" content="Buka buku Cerdas Cermat dan belajar sambil bermain. Ruang perpustakaan belajar interaktif dengan latihan kuis dan buku cerita bergambar." />
     <title>Cerdas Cermat · Perpustakaan Belajar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,18 +18,27 @@
     <link rel="stylesheet" href="/storybook.css" />
     <link rel="stylesheet" href="/auth.css" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <script src="/config.js"></script>
-    <script src="/ui-components.js"></script>
-    <script src="/app.js" defer></script>
+    <script src="/config.js?v=2"></script>
+    <script src="/ui-components.js?v=2"></script>
+    <script src="/app.js?v=3" defer></script>
+    <script src="/pillars.js?v=2" defer></script>
   </head>
   <body>
-    <main class="site-shell" inert>
+    <main class="site-shell">
       <header class="topbar">
         <a class="brand" href="#home">
           <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M18 9c-4-3-8-3-13-2v18c5-1 9-1 13 2m0-18c4-3 8-3 13-2v18c-5-1-9-1-13 2m0-18v18"/></svg></span>
           <span><strong>cerdas<span>cermat</span></strong><small>RUANG BELAJAR</small></span>
         </a>
-        <nav class="topnav" aria-label="Navigasi utama"><a href="#rak">Perpustakaan</a><a href="#buku-cerita">Buku Cerita</a><a href="#cara">Cara belajar</a><button class="nav-progress" id="resume-link">Lanjutkan materi</button><button class="nav-progress" id="progress-link"><span class="nav-dot"></span> Progres saya</button><button class="nav-progress" id="account-link">Masuk</button><span class="sync-status" id="sync-status" role="status">Online</span></nav>
+        <nav class="topnav" aria-label="Navigasi utama">
+          <a href="#rak">Perpustakaan</a>
+          <a href="#buku-cerita">Buku Cerita</a>
+          <button class="nav-progress" id="placement-link" type="button"><span class="nav-dot"></span> Tes Penempatan</button>
+          <button class="nav-progress" id="sm2-link" type="button">Review & Peta Penguasaan</button>
+          <button class="nav-progress" id="resume-link">Lanjutkan</button>
+          <button class="nav-progress" id="account-link">Masuk</button>
+          <span class="sync-status" id="sync-status" role="status">Online</span>
+        </nav>
         <button class="mobile-menu" id="mobile-menu" aria-label="Buka menu" aria-expanded="false"><span></span><span></span></button>
       </header>
 
@@ -85,13 +96,22 @@
           <p>“20ribu mu tidak akan membuatmu miskin seketika tapi ilmu yang akan kamu pelajari akan selamanya membuat mu kaya pengetahuan.”</p>
         </div>
         <div class="donation-card">
-          <span class="donation-label">DONASI MELALUI DANA</span>
-          <strong class="donation-number">087779026118</strong>
-          <button class="donation-copy-button" id="copy-donation-number" type="button">Salin nomor DANA</button>
+          <div class="donation-info">
+            <span class="donation-label">DONASI MELALUI DANA</span>
+            <strong class="donation-number">087779026118</strong>
+            <p class="donation-name">Satrio S Utomo</p>
+            <button class="donation-copy-button" id="copy-donation-number" type="button">Salin nomor DANA</button>
+          </div>
+          <div class="donation-qr-wrapper">
+            <div class="donation-qr-frame" title="Pindai QR untuk donasi via DANA / e-wallet">
+              <img src="/assets/dana-qr.svg" alt="Kode QR DANA 087779026118" class="donation-qr-image" width="96" height="96" />
+            </div>
+            <span class="donation-qr-hint">Pindai QR DANA</span>
+          </div>
         </div>
       </section>
 
-      <footer class="footer"><a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true">✳</span><span><strong>cerdas<span>cermat</span></strong><small>RUANG BELAJAR</small></span></a><span>Ruang kecil untuk rasa ingin tahu yang besar.</span><span>© 2026 Cerdas Cermat</span><span class="footer-credit">Dibuat oleh Satrio S Utomo</span></footer>
+      <footer class="footer"><a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true">✳</span><span><strong>cerdas<span>cermat</span></strong><small>RUANG BELAJAR</small></span></a><span>Ruang kecil untuk rasa ingin tahu yang besar.<br />Dibuat oleh Satrio S Utomo</span></footer>
     </main>
 
     <div class="catalog-overlay" id="catalog-dialog" aria-hidden="true">
@@ -146,8 +166,10 @@
             <div class="page-heading"><span class="page-section-label" id="page-section-label">LEMBAR LATIHAN</span><span class="page-progress" id="page-progress-count">01 / 17</span></div>
             <h2 class="quiz-page-title" id="quiz-page-title">Latihan Matematika</h2>
             <div class="question-list" id="question-list"></div>
-            <div class="page-bottom"><span class="page-number" id="right-page-number">1</span></div>
-            <span class="page-instruction" id="page-instruction">Lingkari jawaban yang paling tepat.</span>
+            <div class="page-bottom">
+              <span class="page-number" id="right-page-number">1</span>
+              <span class="page-instruction" id="page-instruction">Lingkari jawaban yang paling tepat.</span>
+            </div>
           </section>
           <div class="page-flip" id="page-flip" aria-hidden="true"><div class="flip-face flip-front"><div class="paper-running"><span id="flip-book-label">Cerdas Cermat</span><span>Halaman 1</span></div><div class="flip-content"></div><div class="page-bottom"><span>Terus semangat belajar!</span><span class="page-number">1</span></div></div><div class="flip-face flip-back"><span class="flip-back-mark">✳</span></div></div>
           <div class="book-spine"></div>
@@ -180,14 +202,115 @@
         <div class="auth-divider" id="account-auth-divider" hidden>atau lanjutkan dengan email</div>
         <form id="account-form" class="utility-form">
           <label id="account-name-label" hidden>Nama<input id="account-name" autocomplete="name" maxlength="80" placeholder="Nama lengkap" /></label>
-          <label>Email<input id="account-email" type="email" autocomplete="email" required maxlength="254" placeholder="nama@email.com" /></label>
-          <label>Kata sandi<input id="account-password" type="password" autocomplete="current-password" required minlength="10" maxlength="200" placeholder="Masukkan kata sandi" /></label>
+          <label id="account-email-label">Email<input id="account-email" type="email" autocomplete="email" required maxlength="254" placeholder="nama@email.com" /></label>
+          <p id="account-email-hint" class="account-email-hint" hidden>💡 Email yang sama dapat digunakan hingga 4 akun belajar (misalnya untuk anak atau profil berbeda).</p>
+          <label id="account-password-label">Kata sandi<input id="account-password" type="password" autocomplete="current-password" required minlength="10" maxlength="200" placeholder="Masukkan kata sandi (minimal 10 karakter)" /></label>
+          <div class="forgot-password-row" id="account-password-wrapper">
+            <button type="button" class="forgot-password-link" id="account-forgot-link">Lupa Kata Sandi?</button>
+          </div>
           <label id="account-role-field" hidden>Jenis akun<select id="account-role"><option value="student">Siswa</option><option value="teacher">Guru (perlu kode undangan)</option><option value="reviewer">Reviewer (perlu kode undangan)</option></select></label>
           <label id="account-invite-field" hidden>Kode undangan<input id="account-invite" autocomplete="off" /></label>
           <p id="account-error" class="form-error" role="alert"></p>
-          <div class="catalog-actions"><button class="catalog-start" type="submit" id="account-submit">Masuk ke akun</button><button class="catalog-cancel" id="account-mode-toggle" type="button">Belum punya akun? <span>Buat akun</span></button></div>
+          <div class="catalog-actions">
+            <button class="catalog-start" type="submit" id="account-submit">Masuk ke akun</button>
+            <button class="catalog-cancel" id="account-mode-toggle" type="button">Belum punya akun? <span>Buat akun</span></button>
+          </div>
         </form>
-        <div class="catalog-actions" id="account-session-actions" hidden><button class="catalog-cancel" id="account-logout" type="button">Keluar</button></div>
+        <div id="account-picker" class="account-picker" hidden>
+          <div class="account-picker-header">
+            <strong>Pilih Akun Belajar</strong>
+            <p id="account-picker-desc">Email ini memiliki beberapa akun. Silakan pilih akun yang ingin digunakan:</p>
+          </div>
+          <div id="account-picker-list" class="account-picker-list"></div>
+          <button type="button" class="catalog-cancel" id="account-picker-back">← Kembali ke Form Masuk</button>
+        </div>
+        <div class="account-session-box" id="account-session-actions" hidden>
+          <div class="account-session-card">
+            <div class="account-session-avatar">👤</div>
+            <div class="account-session-info">
+              <strong id="account-display-name">Akun Aktif</strong>
+              <span id="account-display-meta">Email · Peran</span>
+            </div>
+          </div>
+          <button class="account-multi-add-btn" id="account-create-another-btn" type="button">
+            <span class="multi-btn-icon">＋</span>
+            <span class="multi-btn-content">
+              <strong>Buat Akun Lain dengan Email Ini</strong>
+              <small>Bisa mendaftar hingga 4 profil belajar berbeda</small>
+            </span>
+          </button>
+          <button class="catalog-cancel account-logout-action" id="account-logout" type="button">Keluar dari Akun</button>
+        </div>
+      </section>
+    </div>
+    <div class="catalog-overlay utility-overlay" id="reset-password-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-password-title">
+        <button class="catalog-close" id="close-reset-password" type="button" aria-label="Tutup">×</button>
+        <div class="auth-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
+        </div>
+        <div class="auth-kicker">PEMULIHAN KATA SANDI</div>
+        <h2 id="reset-password-title">Atur ulang <em>kata sandi.</em></h2>
+        <p class="catalog-intro" id="reset-password-copy">Masukkan email terdaftar untuk menerima kode verifikasi OTP 6-digit.</p>
+
+        <!-- Langkah 1: Kirim Kode OTP -->
+        <form id="reset-request-form" class="utility-form">
+          <label id="reset-email-label">Email akun<input id="reset-email" type="email" autocomplete="email" required maxlength="254" placeholder="nama@email.com" /></label>
+          <p id="reset-step1-error" class="form-error" role="alert"></p>
+          <div class="catalog-actions">
+            <button class="catalog-start" type="submit" id="reset-request-submit">Kirim Kode OTP</button>
+            <button class="catalog-cancel" id="reset-cancel-step1" type="button">Kembali ke Masuk</button>
+          </div>
+        </form>
+
+        <!-- Langkah 2: Verifikasi OTP & Masukkan Sandi Baru -->
+        <form id="reset-verify-form" class="utility-form" hidden>
+          <div class="reset-otp-banner" id="reset-otp-banner" role="status">
+            <span class="reset-otp-banner-icon">📩</span>
+            <div class="reset-otp-banner-text">
+              <strong id="reset-sent-notice">Kode OTP telah dikirim.</strong>
+              <small id="reset-demo-code" class="reset-demo-code" hidden></small>
+            </div>
+          </div>
+
+          <div id="reset-account-picker" class="reset-account-picker" hidden>
+            <label for="reset-account-select">Pilih profil yang ingin diatur ulang:
+              <select id="reset-account-select"></select>
+            </label>
+          </div>
+
+          <label id="reset-otp-label">Kode Verifikasi OTP (6 Digit)
+            <input id="account-otp-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required placeholder="Contoh: 123456" />
+          </label>
+
+          <label id="account-new-password-label">Kata sandi baru
+            <input id="account-new-password" type="password" autocomplete="new-password" required minlength="10" maxlength="200" placeholder="Minimal 10 karakter" />
+          </label>
+
+          <label id="account-confirm-password-label">Konfirmasi kata sandi baru
+            <input id="account-confirm-password" type="password" autocomplete="new-password" required minlength="10" maxlength="200" placeholder="Ulangi kata sandi baru" />
+          </label>
+
+          <p id="reset-step2-error" class="form-error" role="alert"></p>
+
+          <div class="catalog-actions">
+            <button class="catalog-start" type="submit" id="reset-verify-submit">Simpan Kata Sandi Baru</button>
+            <div class="reset-aux-actions">
+              <button class="catalog-cancel" id="reset-resend-otp" type="button">Kirim ulang kode OTP</button>
+              <button class="catalog-cancel" id="reset-back-to-step1" type="button">← Ubah email</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Langkah 3: Berhasil -->
+        <div id="reset-success-view" class="reset-success-box" hidden>
+          <div class="reset-success-icon" aria-hidden="true">✓</div>
+          <h3>Kata Sandi Berhasil Diperbarui!</h3>
+          <p>Kata sandi akun belajar Anda telah berhasil diubah. Silakan masuk menggunakan kata sandi baru.</p>
+          <div class="catalog-actions">
+            <button class="catalog-start" id="reset-success-login-btn" type="button">Masuk Sekarang</button>
+          </div>
+        </div>
       </section>
     </div>
     <div class="catalog-overlay utility-overlay" id="progress-dialog" aria-hidden="true">
@@ -217,6 +340,385 @@
         <div class="catalog-actions"><button class="catalog-cancel" id="close-progress-action" type="button">Tutup</button><button class="catalog-start" id="clear-progress" type="button">Hapus progres saya</button></div>
       </section>
     </div>
+    <!-- Dialog 1: Tes Penempatan Awal (10 Soal) -->
+    <div class="catalog-overlay utility-overlay" id="placement-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog placement-dialog" role="dialog" aria-modal="true" aria-labelledby="placement-title">
+        <button class="catalog-close" id="close-placement" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PILAR A · TES PENEMPATAN</div>
+        <h2 id="placement-title">Tes Penempatan <em>10 Soal.</em></h2>
+        <p class="catalog-intro">Uji pemahaman dasar untuk mengukur level awal (Level 1..5) dan target kesulitan belajarmu.</p>
+
+        <div id="placement-setup" class="placement-setup-box">
+          <div class="catalog-fields">
+            <label>Jenjang Belajar
+              <select id="placement-level-select">
+                <option value="sd">SD (Sekolah Dasar)</option>
+                <option value="tk">TK · Fondasi</option>
+                <option value="smp">SMP</option>
+                <option value="sma">SMA</option>
+              </select>
+            </label>
+            <label>Mata Pelajaran
+              <select id="placement-subject-select">
+                <option value="matematika">Matematika</option>
+                <option value="ipas">IPAS / Sains</option>
+                <option value="bahasa-indonesia">Bahasa Indonesia</option>
+                <option value="pancasila">Pancasila</option>
+              </select>
+            </label>
+          </div>
+          <button class="catalog-start" id="start-placement-btn" type="button">Mulai Tes Penempatan <span aria-hidden="true">→</span></button>
+        </div>
+
+        <div id="placement-quiz" class="placement-quiz-box" hidden>
+          <div class="placement-progress-bar"><div class="placement-progress-fill" id="placement-progress-fill"></div></div>
+          <div class="placement-question-meta">
+            <span id="placement-counter">Soal 1 dari 10</span>
+            <span class="difficulty-tag" id="placement-difficulty-tag">Adaptif</span>
+          </div>
+          <h3 class="placement-question-prompt" id="placement-prompt">Memuat pertanyaan...</h3>
+          <div class="placement-choices-grid" id="placement-choices"></div>
+          <div class="placement-nav-row">
+            <button class="catalog-cancel" id="placement-prev-btn" type="button" disabled>Sebelumnya</button>
+            <button class="catalog-start" id="placement-next-btn" type="button">Berikutnya →</button>
+            <button class="catalog-start" id="placement-submit-btn" type="button" hidden>Selesaikan Tes Penempatan ✓</button>
+          </div>
+        </div>
+
+        <div id="placement-result" class="placement-result-box" hidden>
+          <div class="placement-badge-icon" aria-hidden="true">🎯</div>
+          <h3>Hasil Tes Penempatan Dihitung!</h3>
+          <div class="placement-result-stats">
+            <div class="pstat-card"><span class="pstat-val" id="placement-res-level">Level 1</span><span class="pstat-label">Level Awal</span></div>
+            <div class="pstat-card"><span class="pstat-val" id="placement-res-score">0%</span><span class="pstat-label">Skor Jawaban</span></div>
+            <div class="pstat-card"><span class="pstat-val" id="placement-res-xp">+50 XP</span><span class="pstat-label">XP Diperoleh</span></div>
+          </div>
+          <p class="placement-result-desc" id="placement-res-desc"></p>
+          <div class="placement-badges-row" id="placement-badges-row"></div>
+          <div class="catalog-actions">
+            <button class="catalog-start" id="placement-confirm-btn" type="button">Lanjutkan ke Rak Buku & Kuis Level <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Dialog 2: Tutor AI Pembahasan & Latihan Serupa -->
+    <div class="catalog-overlay utility-overlay" id="ai-tutor-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog tutor-dialog" role="dialog" aria-modal="true" aria-labelledby="tutor-title">
+        <button class="catalog-close" id="close-ai-tutor" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PILAR B · PEMBAHASAN & TUTOR AI</div>
+        <h2 id="tutor-title">Tutor AI <em>Langkah demi Langkah.</em></h2>
+        <p class="catalog-intro" id="tutor-intro">Penjelasan mendalam dari AI dan soal latihan serupa untuk menguji kembali pemahamanmu.</p>
+
+        <div class="tutor-question-summary" id="tutor-question-summary">
+          <strong>Soal:</strong>
+          <p id="tutor-original-prompt"></p>
+          <div class="tutor-choice-compare">
+            <div class="tutor-choice-pill is-wrong">Jawabanmu: <span id="tutor-user-choice">-</span></div>
+            <div class="tutor-choice-pill is-correct">Kunci Jawaban: <span id="tutor-correct-choice">-</span></div>
+          </div>
+        </div>
+
+        <div class="tutor-explanation-box">
+          <div class="tutor-box-header">
+            <span class="tutor-sparkle">✨</span>
+            <strong>Pembahasan Tutor AI</strong>
+            <span class="tutor-cached-badge" id="tutor-cache-badge" hidden>Cache Server</span>
+          </div>
+          <div class="tutor-explanation-text" id="tutor-explanation-content">
+            <div class="tutor-loading-spinner">Menganalisis konsep dan menyusun langkah pembahasan…</div>
+          </div>
+        </div>
+
+        <div class="tutor-practice-box" id="tutor-practice-box" hidden>
+          <div class="tutor-box-header">
+            <span class="tutor-sparkle">✍️</span>
+            <strong>Soal Latihan Serupa (Uji Pemahaman)</strong>
+          </div>
+          <p class="tutor-practice-prompt" id="tutor-practice-prompt"></p>
+          <div class="tutor-practice-choices" id="tutor-practice-choices"></div>
+          <div class="tutor-practice-feedback" id="tutor-practice-feedback" hidden></div>
+        </div>
+
+        <div class="tutor-footer-actions">
+          <div class="tutor-sm2-prompt">
+            <strong>Apakah sekarang kamu sudah paham?</strong>
+            <span>Pilihanmu akan menentukan jadwal pengulangan berjarak (SM-2).</span>
+          </div>
+          <div class="tutor-action-buttons">
+            <button class="catalog-cancel" id="tutor-not-understood-btn" type="button">Belum Paham (Review Segera)</button>
+            <button class="catalog-start" id="tutor-understood-btn" type="button">Ya, Saya Sudah Paham (Jadwalkan SM-2) ✓</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Dialog 3: Antrean Review SM-2 & Peta Penguasaan -->
+    <div class="catalog-overlay utility-overlay" id="sm2-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog sm2-dialog" role="dialog" aria-modal="true" aria-labelledby="sm2-title">
+        <button class="catalog-close" id="close-sm2" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PILAR B · PENGULANGAN BERJARAK SM-2</div>
+        <h2 id="sm2-title">Review Harian & <em>Peta Penguasaan.</em></h2>
+
+        <div class="sm2-tab-nav">
+          <button class="sm2-tab-btn active" id="sm2-tab-queue-btn" type="button">Antrean Review Harian (<span id="sm2-queue-count">0</span>)</button>
+          <button class="sm2-tab-btn" id="sm2-tab-map-btn" type="button">Peta Penguasaan Materi</button>
+        </div>
+
+        <!-- Tab 1: Antrean Review -->
+        <div id="sm2-queue-panel" class="sm2-tab-content">
+          <div class="sm2-queue-header">
+            <p>Soal yang dijawab salah atau ragu masuk ke antrean ini. Jawab benar <strong>3x berturut-turut</strong> untuk menandai materi <strong>"Dikuasai"</strong>.</p>
+          </div>
+          <div id="sm2-queue-container" class="sm2-queue-container">
+            <div class="sm2-empty-state" id="sm2-empty-state">
+              <span class="sm2-empty-icon">🎉</span>
+              <strong>Tidak ada soal yang perlu diulang hari ini!</strong>
+              <p>Hebat! Semua soal telah kamu kuasai atau belum jatuh tempo review.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Peta Penguasaan -->
+        <div id="sm2-map-panel" class="sm2-tab-content" hidden>
+          <div class="mastery-summary-grid">
+            <div class="mstat-card"><span class="mstat-num" id="mastery-total-tracked">0</span><span class="mstat-label">Soal Dipelajari</span></div>
+            <div class="mstat-card"><span class="mstat-num" id="mastery-total-mastered">0</span><span class="mstat-label">Dikuasai (Streak 3x)</span></div>
+            <div class="mstat-card"><span class="mstat-num" id="mastery-total-progress">0</span><span class="mstat-label">Dalam Antrean Review</span></div>
+          </div>
+          <h4 class="mastery-section-title">Penguasaan per Mata Pelajaran</h4>
+          <div id="mastery-subject-bars" class="mastery-subject-bars"></div>
+          <h4 class="mastery-section-title">Koleksi Lencana Penguasaan</h4>
+          <div id="mastery-badges-grid" class="mastery-badges-grid"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Dialog 4: Kuis Kelas Live (Guru & Siswa) -->
+    <div class="catalog-overlay utility-overlay" id="live-class-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog live-dialog" role="dialog" aria-modal="true" aria-labelledby="live-title">
+        <button class="catalog-close" id="close-live-class" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PILAR C · KUIS KELAS REAL-TIME</div>
+        <h2 id="live-title">Ruang Kuis <em>Kelas Live.</em></h2>
+
+        <div class="sm2-tab-nav" id="live-mode-tabs">
+          <button class="sm2-tab-btn active" id="live-tab-student-btn" type="button">Siswa: Gabung Kuis</button>
+          <button class="sm2-tab-btn" id="live-tab-teacher-btn" type="button">Guru: Buat Ruang Kuis</button>
+        </div>
+
+        <!-- Siswa: Join Form -->
+        <div id="live-student-join-panel" class="live-tab-content">
+          <form id="live-join-form" class="utility-form">
+            <label>Kode PIN Ruang Kelas (6 Digit)
+              <input id="live-pin-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="Contoh: 549182" />
+            </label>
+            <label>Nama Siswa
+              <input id="live-name-input" type="text" maxlength="60" required placeholder="Nama lengkap siswa" />
+            </label>
+            <p id="live-join-error" class="form-error" role="alert"></p>
+            <div class="catalog-actions">
+              <button class="catalog-start" type="submit" id="live-join-submit">Gabung ke Ruang Kuis <span aria-hidden="true">→</span></button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Guru: Create Room Form -->
+        <div id="live-teacher-create-panel" class="live-tab-content" hidden>
+          <form id="live-create-form" class="utility-form">
+            <label>Judul Kuis Kelas
+              <input id="live-create-title" type="text" maxlength="80" value="Kuis Cepat Kelas" required />
+            </label>
+            <div class="catalog-fields">
+              <label>Jenjang
+                <select id="live-create-level">
+                  <option value="sd">SD</option>
+                  <option value="tk">TK</option>
+                  <option value="smp">SMP</option>
+                  <option value="sma">SMA</option>
+                </select>
+              </label>
+              <label>Mata Pelajaran
+                <select id="live-create-subject">
+                  <option value="matematika">Matematika</option>
+                  <option value="ipas">IPAS</option>
+                  <option value="bahasa-indonesia">Bahasa Indonesia</option>
+                  <option value="pancasila">Pancasila</option>
+                </select>
+              </label>
+            </div>
+            <label>Jumlah Soal
+              <select id="live-create-count">
+                <option value="5">5 Soal Cepat</option>
+                <option value="10">10 Soal Lengkap</option>
+              </select>
+            </label>
+            <p id="live-create-error" class="form-error" role="alert"></p>
+            <div class="catalog-actions">
+              <button class="catalog-start" type="submit" id="live-create-submit">Buat Ruang & Dapatkan PIN <span aria-hidden="true">→</span></button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Active Room Arena (Sync WebSocket) -->
+        <div id="live-room-arena" class="live-arena-box" hidden>
+          <div class="live-arena-topbar">
+            <div class="live-pin-badge">
+              <span>PIN KELAS:</span>
+              <strong id="live-active-pin">------</strong>
+            </div>
+            <div class="live-room-info">
+              <strong id="live-room-title">Kuis Kelas</strong>
+              <small id="live-room-status">Menunggu peserta bergabung...</small>
+            </div>
+            <div class="live-timer-badge" id="live-timer-badge">
+              <span id="live-timer-val">20s</span>
+            </div>
+          </div>
+
+          <!-- Teacher Controls Bar -->
+          <div class="live-teacher-controls" id="live-teacher-controls" hidden>
+            <button class="catalog-start" id="live-next-q-btn" type="button">Mulai / Soal Berikutnya →</button>
+            <button class="catalog-cancel" id="live-review-q-btn" type="button">Tampilkan Pembahasan Soal</button>
+          </div>
+
+          <div class="live-arena-layout">
+            <!-- Left: Question & Choices -->
+            <div class="live-question-column">
+              <div id="live-question-view" class="live-question-view">
+                <div class="live-q-header">
+                  <span id="live-q-number">Soal 1</span>
+                  <span id="live-q-difficulty" class="difficulty-tag">Sedang</span>
+                </div>
+                <h3 class="live-q-prompt" id="live-q-prompt">Menunggu guru memulai pertanyaan...</h3>
+                <div class="live-choices-grid" id="live-choices-container"></div>
+                <div class="live-review-box" id="live-review-box" hidden>
+                  <strong>Pembahasan:</strong>
+                  <p id="live-review-text"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Live Leaderboard -->
+            <div class="live-leaderboard-column">
+              <h4>Papan Peringkat Live 🏆</h4>
+              <ol class="live-leaderboard-list" id="live-leaderboard-list">
+                <li class="empty-board">Belum ada peserta menjawab</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Dialog 5: Teacher CMS Bank Soal -->
+    <div class="catalog-overlay utility-overlay" id="cms-dialog" aria-hidden="true">
+      <section class="catalog-dialog utility-dialog cms-dialog" role="dialog" aria-modal="true" aria-labelledby="cms-title">
+        <button class="catalog-close" id="close-cms" type="button" aria-label="Tutup">×</button>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PILAR C · CMS BANK SOAL & VALIDASI</div>
+        <h2 id="cms-title">CMS Guru: <em>Bank Soal.</em></h2>
+
+        <div class="sm2-tab-nav">
+          <button class="sm2-tab-btn active" id="cms-tab-create-btn" type="button">Tulis Soal Baru</button>
+          <button class="sm2-tab-btn" id="cms-tab-list-btn" type="button">Katalog Bank Soal (<span id="cms-total-count">0</span>)</button>
+        </div>
+
+        <!-- Form Tulis Soal -->
+        <div id="cms-create-panel" class="cms-tab-content">
+          <form id="cms-question-form" class="utility-form">
+            <div class="catalog-fields">
+              <label>Jenjang
+                <select id="cms-q-level">
+                  <option value="sd">SD (Sekolah Dasar)</option>
+                  <option value="tk">TK · Fondasi</option>
+                  <option value="smp">SMP</option>
+                  <option value="sma">SMA</option>
+                </select>
+              </label>
+              <label>Mata Pelajaran
+                <select id="cms-q-subject">
+                  <option value="matematika">Matematika</option>
+                  <option value="ipas">IPAS / Sains</option>
+                  <option value="bahasa-indonesia">Bahasa Indonesia</option>
+                  <option value="pancasila">Pancasila</option>
+                </select>
+              </label>
+              <label>Tingkat Kesulitan
+                <select id="cms-q-difficulty">
+                  <option value="mudah">Mudah</option>
+                  <option value="sedang" selected>Sedang</option>
+                  <option value="sulit">Sulit</option>
+                </select>
+              </label>
+            </div>
+
+            <label>Tag Capaian Pembelajaran (CP) / Kompetensi Dasar (KD)
+              <input id="cms-q-cpkd" type="text" required placeholder="Contoh: CP.MAT.01 (Penjumlahan dan Pecahan Dasar)" />
+            </label>
+
+            <label>Pertanyaan / Soal (Prompt)
+              <textarea id="cms-q-prompt" rows="3" required placeholder="Tuliskan teks soal secara jelas..."></textarea>
+            </label>
+
+            <div class="cms-choices-editor">
+              <label>Pilihan Jawaban (Pilih radio untuk menandai Kunci Jawaban):</label>
+              <div class="cms-choice-row">
+                <input type="radio" name="cms-correct" value="0" checked id="cms-radio-0" />
+                <span class="choice-letter">A.</span>
+                <input type="text" id="cms-choice-0" required placeholder="Pilihan A" />
+              </div>
+              <div class="cms-choice-row">
+                <input type="radio" name="cms-correct" value="1" id="cms-radio-1" />
+                <span class="choice-letter">B.</span>
+                <input type="text" id="cms-choice-1" required placeholder="Pilihan B" />
+              </div>
+              <div class="cms-choice-row">
+                <input type="radio" name="cms-correct" value="2" id="cms-radio-2" />
+                <span class="choice-letter">C.</span>
+                <input type="text" id="cms-choice-2" required placeholder="Pilihan C" />
+              </div>
+              <div class="cms-choice-row">
+                <input type="radio" name="cms-correct" value="3" id="cms-radio-3" />
+                <span class="choice-letter">D.</span>
+                <input type="text" id="cms-choice-3" required placeholder="Pilihan D" />
+              </div>
+            </div>
+
+            <label>Pembahasan Langkah demi Langkah
+              <textarea id="cms-q-explanation" rows="3" required placeholder="Tuliskan pembahasan lengkap dan konsep dasar penyelesaiannya..."></textarea>
+            </label>
+
+            <div class="cms-validation-preview" id="cms-validation-preview">
+              <span class="val-check">✓ Format standar 4 opsi</span>
+              <span class="val-check">✓ Kunci jawaban tervalidasi</span>
+              <span class="val-check">✓ Pembahasan langkah demi langkah tersedia</span>
+            </div>
+
+            <p id="cms-error" class="form-error" role="alert"></p>
+
+            <div class="catalog-actions">
+              <button class="catalog-start" type="submit" id="cms-save-btn">Validasi Otomatis & Simpan ke Bank Soal <span aria-hidden="true">✓</span></button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Daftar Bank Soal -->
+        <div id="cms-list-panel" class="cms-tab-content" hidden>
+          <div class="cms-filter-row">
+            <input type="text" id="cms-filter-search" placeholder="Cari CP/KD atau kata kunci..." />
+            <select id="cms-filter-difficulty">
+              <option value="">Semua Kesulitan</option>
+              <option value="mudah">Mudah</option>
+              <option value="sedang">Sedang</option>
+              <option value="sulit">Sulit</option>
+            </select>
+          </div>
+          <div id="cms-questions-container" class="cms-questions-container">
+            <p>Memuat bank soal…</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-message"></span><button id="toast-retry" type="button" hidden>Coba lagi</button></div>
   </body>
 </html>

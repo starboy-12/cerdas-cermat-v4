@@ -26,7 +26,13 @@ frontend/
 
 ## Menjalankan secara terpisah
 
-Perlu Node.js 18+.
+Perlu Node.js 18+. Pasang dependency backend satu kali:
+
+```powershell
+cd backend
+npm.cmd install
+cd ..
+```
 
 Terminal pertama, jalankan API:
 
@@ -42,7 +48,7 @@ cd frontend
 npm.cmd start
 ```
 
-Buka `http://localhost:5174`. Backend berjalan di `http://localhost:3101`; alamatnya diatur di `frontend/config.js`. Port ini menghindari bentrok dengan layanan lain yang memakai port `5173` dan `3100`.
+Buka `http://localhost:5174`. Backend berjalan di `http://localhost:3101`; frontend diarahkan ke API tersebut secara otomatis saat berjalan pada port `5174`. Untuk deployment, alamat API dapat diatur melalui `window.CERDAS_CONFIG` atau meta `api-base-url`.
 
 Untuk menjalankan keduanya sekaligus dari folder proyek, gunakan:
 
@@ -54,7 +60,7 @@ Skrip membuka jendela backend dan frontend, lalu memeriksa endpoint keduanya. Tu
 
 ## Alur prototipe yang tersedia
 
-1. Pilih jenjang, kurikulum, dan fase/kelas.
+1. Pilih jenjang dan kurikulum. Kurikulum Merdeka menggunakan fase; Kurikulum 2013, Kurikulum Darurat, KBK 2004, dan KTSP 2006 menyediakan kelompok usia TK atau pilihan kelas individual sesuai jenjang. Kurikulum lama ditandai sebagai arsip dan peta materi/kuisnya perlu ditelaah guru sebelum menjadi rujukan resmi.
 2. Pilih mata pelajaran dan materi.
 3. Baca ringkasan materi dalam empat halaman buku; progres baca disimpan oleh backend.
 4. Setiap mapel atau elemen memiliki kuis latihan 50 soal, tiga soal per halaman. Kuis dapat dipilih langsung dari daftar materi atau dimulai setelah membaca materi.

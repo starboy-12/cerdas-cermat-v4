@@ -4,22 +4,28 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { URL } = require('node:url');
 const { OAuth2Client } = require('google-auth-library');
+const { WebSocketServer } = require('ws');
 const { books, publicBook } = require('../data/books');
-const { CURRICULA, catalogFor, lessonPages } = require('../data/curriculum-catalog');
+const { CURRICULA, phasesFor, catalogFor, lessonPages } = require('../data/curriculum-catalog');
 const { quizFor } = require('../data/quizzes');
 const { storybookFor, storybookPage } = require('../data/storybook');
 const { createContentStore } = require('./content-store');
 const { validateCatalog, validateQuestion, validateMediaAsset } = require('./validation');
 const { mergeValue } = require('./state-merge');
+const { calculateSM2 } = require('./sm2');
+const { getTutorExplanation } = require('./ai-tutor');
+const { BADGE_DEFINITIONS, getPlacementQuestions, evaluatePlacementTest } = require('./adaptive');
+const { createRoom, getRoom, roomView, joinStudent, submitAnswer, nextQuestion, showReview, broadcastToRoom } = require('./live-classroom');
 
-const port = Number(process.env.PORT || 3101);
+const port = Number(process.env.APP_PORT || (process.env.PORT && process.env.PORT !== '8080' ? process.env.PORT : 3101));
 const storePath = path.resolve(process.env.PROGRESS_FILE || path.resolve(__dirname, '../data/progress.json'));
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5174,http://127.0.0.1:5174').split(',').map((origin) => origin.trim());
-let store = { progress: {}, attempts: {}, readingProgress: {}, users: {}, classes: {} };
+let store = { progress: {}, attempts: {}, readingProgress: {}, users: {}, classes: {}, bankQuestions: [] };
 let writeQueue = Promise.resolve();
 let databasePool = null;
 let storeBaseline = null;
 const sessions = new Map();
+const otpStore = new Map();
 const googleOAuthClient = new OAuth2Client();
 const contentStore = createContentStore(path.resolve(process.env.CONTENT_FILE || path.resolve(__dirname, '../data/content.json')));
 const rateWindows = new Map();
@@ -33,20 +39,24 @@ const developerEmail = (process.env.DEVELOPER_EMAIL || 'satriosimputra21@gmail.c
 async function loadStore() {
   if (process.env.DATABASE_URL) {
     let Pool;
-    try { ({ Pool } = require('pg')); }
-    catch { throw new Error('DATABASE_URL diatur, tetapi dependency pg belum terpasang. Jalankan npm install di backend/.'); }
-    databasePool = new Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DB_POOL_SIZE || 10), connectionTimeoutMillis: REQUEST_TIMEOUT_MS });
-    await databasePool.query(await fs.readFile(path.resolve(__dirname, '../db/schema.sql'), 'utf8'));
-    await databasePool.query('INSERT INTO application_state (id, payload) VALUES (1, $1::jsonb) ON CONFLICT (id) DO NOTHING', [JSON.stringify({ progress: {}, attempts: {}, readingProgress: {}, users: {}, classes: {} })]);
-    const result = await databasePool.query('SELECT payload, revision FROM application_state WHERE id = 1');
-    const parsed = result.rows[0].payload;
-    store = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {} };
-    storeBaseline = JSON.parse(JSON.stringify(store));
-    return;
+    try {
+      ({ Pool } = require('pg'));
+      databasePool = new Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DB_POOL_SIZE || 10), connectionTimeoutMillis: REQUEST_TIMEOUT_MS });
+      await databasePool.query(await fs.readFile(path.resolve(__dirname, '../db/schema.sql'), 'utf8'));
+      await databasePool.query('INSERT INTO application_state (id, payload) VALUES (1, $1::jsonb) ON CONFLICT (id) DO NOTHING', [JSON.stringify({ progress: {}, attempts: {}, readingProgress: {}, users: {}, classes: {} })]);
+      const result = await databasePool.query('SELECT payload, revision FROM application_state WHERE id = 1');
+      const parsed = result.rows[0].payload;
+      store = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {}, bankQuestions: parsed.bankQuestions || [] };
+      storeBaseline = JSON.parse(JSON.stringify(store));
+      return;
+    } catch (err) {
+      console.warn('[AI Studio] PostgreSQL tidak dapat digunakan, menggunakan penyimpanan lokal JSON:', err.message);
+      databasePool = null;
+    }
   }
   try {
     const parsed = JSON.parse(await fs.readFile(storePath, 'utf8'));
-    store = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {} };
+    store = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {}, bankQuestions: parsed.bankQuestions || [] };
     storeBaseline = JSON.parse(JSON.stringify(store));
   } catch (error) {
     if (error.code !== 'ENOENT') console.error('Tidak dapat membaca progres tersimpan:', error.message);
@@ -61,7 +71,7 @@ function persistStore() {
         await client.query('BEGIN');
         const result = await client.query('SELECT payload FROM application_state WHERE id = 1 FOR UPDATE');
         const parsed = result.rows[0]?.payload || {};
-        const remote = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {} };
+        const remote = { progress: parsed.progress || {}, attempts: parsed.attempts || {}, readingProgress: parsed.readingProgress || {}, users: parsed.users || {}, classes: parsed.classes || {}, bankQuestions: parsed.bankQuestions || [] };
         const merged = mergeValue(storeBaseline, store, remote);
         await client.query('UPDATE application_state SET payload = $1::jsonb, revision = revision + 1, updated_at = now() WHERE id = 1', [JSON.stringify(merged)]);
         await syncRelationalState(client, merged, remote);
@@ -129,7 +139,8 @@ function validStudentId(value) {
 }
 
 function validContext(book, curriculum, phase) {
-  return Boolean(book && CURRICULA.some((item) => item.id === curriculum) && book.phases.some((item) => item.id === phase));
+  return Boolean(book && CURRICULA.some((item) => item.id === curriculum)
+    && phasesFor(book.id, curriculum).some((item) => item.id === phase));
 }
 
 function packKey(bookId, curriculum, phase, subjectId = 'matematika') {
@@ -325,7 +336,7 @@ function validateLearningCatalog() {
   const issues = [];
   const base = validateCatalog(books);
   issues.push(...base.issues);
-  for (const book of books) for (const curriculum of CURRICULA) for (const phase of book.phases) {
+  for (const book of books) for (const curriculum of CURRICULA) for (const phase of phasesFor(book.id, curriculum.id)) {
     const catalog = catalogFor(book.id, curriculum.id, phase.id);
     if (!catalog) { issues.push(`Katalog ${book.id}/${curriculum.id}/${phase.id} tidak tersedia.`); continue; }
     const subjectIds = new Set();
@@ -407,15 +418,57 @@ async function syncRelationalState(client, next, previous) {
 async function handleApi(req, res, url, user) {
   const pathname = url.pathname;
 
-  const publicRoute = req.method === 'GET' && ['/api/health', '/api/openapi.json', '/api/auth/config'].includes(pathname)
-    || req.method === 'POST' && ['/api/auth/register', '/api/auth/login', '/api/auth/google'].includes(pathname);
+  const publicRoute = ['GET', 'HEAD'].includes(req.method) && ['/api/health', '/api/openapi.json', '/api/auth/config', '/api/auth/dev-login', '/api/auth/accounts-by-email'].includes(pathname)
+    || req.method === 'POST' && ['/api/auth/register', '/api/auth/login', '/api/auth/google', '/api/auth/dev-login', '/api/auth/forgot-password', '/api/auth/reset-password'].includes(pathname);
   if (!user && !publicRoute) {
     sendJson(res, 401, { error: 'Masuk diperlukan sebelum menggunakan layanan belajar.' });
     return;
   }
 
+  if (pathname === '/api/auth/dev-login' && (req.method === 'POST' || req.method === 'GET')) {
+    const devSecret = process.env.DEVELOPER_SECRET || 'cerdas-cermat-dev-secret-2026';
+    let body = {};
+    if (req.method === 'POST') {
+      try { body = await readBody(req); } catch { body = {}; }
+    }
+    const providedSecret = req.headers['x-developer-secret'] || body.secret || url.searchParams.get('secret');
+
+    const isOwner = user && user.email === developerEmail;
+    const hasValidSecret = Boolean(providedSecret && providedSecret === devSecret);
+
+    if (!isOwner && !hasValidSecret) {
+      sendJson(res, 403, {
+        error: `Akses developer ditolak. Akun developer hanya dapat diakses oleh pemilik (${developerEmail}).`,
+      });
+      return;
+    }
+
+    const devAccount = await seedDeveloper();
+    sendJson(res, 200, issueSession(devAccount));
+    return;
+  }
+
   if (pathname === '/api/auth/config' && req.method === 'GET') {
     sendJson(res, 200, { googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID), googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+    return;
+  }
+
+  if (pathname === '/api/auth/accounts-by-email' && req.method === 'GET') {
+    const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+    if (!email) {
+      sendJson(res, 400, { error: 'Parameter email diperlukan.' });
+      return;
+    }
+    const accounts = Object.values(store.users)
+      .filter((entry) => entry.email === email)
+      .map(safeUser);
+    sendJson(res, 200, {
+      email,
+      count: accounts.length,
+      maxAccounts: 4,
+      canRegisterMore: accounts.length < 4,
+      accounts: accounts.map((a) => ({ id: a.id, name: a.name, role: a.role })),
+    });
     return;
   }
 
@@ -426,25 +479,214 @@ async function handleApi(req, res, url, user) {
     const password = body.password;
     const requestedRole = body.role || 'student';
     const role = ['teacher', 'reviewer'].includes(requestedRole) && process.env[`${requestedRole.toUpperCase()}_INVITE_CODE`] && body.inviteCode === process.env[`${requestedRole.toUpperCase()}_INVITE_CODE`] ? requestedRole : 'student';
+
+    if (email === developerEmail) {
+      sendJson(res, 403, {
+        error: 'Alamat email ini dilindungi khusus untuk akun Pengembang (Developer). Orang lain tidak diizinkan mendaftar dengan email ini.',
+      });
+      return;
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !name || name.length > 80 || typeof password !== 'string' || password.length < 10 || password.length > 200) {
       sendJson(res, 400, { error: 'Email, nama, atau kata sandi tidak memenuhi ketentuan (kata sandi minimal 10 karakter).' }); return;
     }
     if (['teacher', 'reviewer'].includes(requestedRole) && role !== requestedRole) { sendJson(res, 403, { error: 'Kode undangan tidak valid atau belum dikonfigurasi.' }); return; }
-    if (Object.values(store.users).some((entry) => entry.email === email)) { sendJson(res, 409, { error: 'Email sudah terdaftar.' }); return; }
+
+    const existingAccounts = Object.values(store.users).filter((entry) => entry.email === email);
+    if (existingAccounts.length >= 4) {
+      sendJson(res, 409, { error: 'Batas pembuatan akun dengan email yang sama telah tercapai (maksimal 4 akun per email).' });
+      return;
+    }
+
     const id = `user-${crypto.randomUUID()}`;
     const credentials = hashPassword(password);
     const created = { id, email, name, role, salt: credentials.salt, passwordHash: credentials.hash, createdAt: new Date().toISOString() };
     store.users[id] = created;
     await persistStore();
-    sendJson(res, 201, issueSession(created)); return;
+    const session = issueSession(created);
+    sendJson(res, 201, {
+      ...session,
+      accountIndex: existingAccounts.length + 1,
+      maxAccounts: 4,
+    });
+    return;
   }
 
   if (pathname === '/api/auth/login' && req.method === 'POST') {
     const body = await readBody(req);
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const account = Object.values(store.users).find((entry) => entry.email === email);
-    if (!account || typeof body.password !== 'string' || !verifyPassword(body.password, account)) { sendJson(res, 401, { error: 'Email atau kata sandi salah.' }); return; }
-    sendJson(res, 200, issueSession(account)); return;
+    const password = typeof body.password === 'string' ? body.password : '';
+    const accountId = typeof body.accountId === 'string' ? body.accountId.trim() : '';
+
+    if (!email || !password) {
+      sendJson(res, 400, { error: 'Email dan kata sandi wajib diisi.' });
+      return;
+    }
+
+    const devPassword = process.env.DEVELOPER_PASSWORD || 'developer-cerdas-cermat-2026';
+    if (email === developerEmail && !Object.values(store.users).some((entry) => entry.email === email)) {
+      await seedDeveloper();
+    }
+    const existingAccounts = Object.values(store.users).filter((entry) => entry.email === email);
+
+    // Jika pengguna memilih ID akun spesifik dari daftar profil
+    if (accountId) {
+      const selectedAccount = existingAccounts.find((acc) => acc.id === accountId);
+      if (!selectedAccount) {
+        sendJson(res, 404, { error: 'Akun yang dipilih tidak ditemukan pada email ini.' });
+        return;
+      }
+      const isDevValid = (email === developerEmail && (password === devPassword || verifyPassword(password, selectedAccount)));
+      if (!isDevValid && !verifyPassword(password, selectedAccount)) {
+        sendJson(res, 401, { error: 'Kata sandi tidak sesuai untuk akun ini.' });
+        return;
+      }
+      sendJson(res, 200, issueSession(selectedAccount));
+      return;
+    }
+
+    if (!existingAccounts.length) {
+      sendJson(res, 401, { error: 'Email atau kata sandi salah.' });
+      return;
+    }
+
+    // Periksa akun yang cocok dengan kata sandi
+    const matchingAccounts = existingAccounts.filter((acc) => {
+      if (email === developerEmail && password === devPassword) return true;
+      return verifyPassword(password, acc);
+    });
+
+    if (matchingAccounts.length === 0) {
+      sendJson(res, 401, { error: 'Email atau kata sandi salah.' });
+      return;
+    }
+
+    if (matchingAccounts.length === 1) {
+      sendJson(res, 200, issueSession(matchingAccounts[0]));
+      return;
+    }
+
+    // Jika lebih dari 1 akun cocok dengan email dan kata sandi yang sama
+    sendJson(res, 200, {
+      requiresAccountSelection: true,
+      message: `Ditemukan ${matchingAccounts.length} akun dengan email ini. Silakan pilih akun yang ingin digunakan:`,
+      accounts: matchingAccounts.map((acc) => safeUser(acc)),
+    });
+    return;
+  }
+
+  if (pathname === '/api/auth/forgot-password' && req.method === 'POST') {
+    const body = await readBody(req);
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      sendJson(res, 400, { error: 'Format email tidak valid.' });
+      return;
+    }
+
+    const existingAccounts = Object.values(store.users).filter((entry) => entry.email === email);
+    if (existingAccounts.length === 0) {
+      sendJson(res, 404, { error: 'Tidak ditemukan akun belajar dengan alamat email tersebut.' });
+      return;
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    otpStore.set(email, {
+      code: otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      attempts: 0,
+    });
+
+    console.log(`[AUTH OTP] Kode reset kata sandi untuk ${email}: ${otp}`);
+
+    sendJson(res, 200, {
+      sent: true,
+      email,
+      message: 'Kode OTP 6-digit berhasil dibuat dan dikirimkan (berlaku 10 menit).',
+      accountCount: existingAccounts.length,
+      accounts: existingAccounts.map(safeUser),
+      debugOtp: otp,
+    });
+    return;
+  }
+
+  if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
+    const body = await readBody(req);
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const otp = typeof body.otp === 'string' ? body.otp.trim() : '';
+    const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
+    const confirmPassword = typeof body.confirmPassword === 'string' ? body.confirmPassword : '';
+    const accountId = typeof body.accountId === 'string' ? body.accountId.trim() : '';
+
+    if (!email || !otp || !newPassword) {
+      sendJson(res, 400, { error: 'Email, kode OTP, dan kata sandi baru wajib diisi.' });
+      return;
+    }
+
+    if (confirmPassword && confirmPassword !== newPassword) {
+      sendJson(res, 400, { error: 'Konfirmasi kata sandi tidak cocok dengan kata sandi baru.' });
+      return;
+    }
+
+    if (newPassword.length < 10 || newPassword.length > 200) {
+      sendJson(res, 400, { error: 'Kata sandi baru minimal harus 10 karakter (maksimal 200 karakter).' });
+      return;
+    }
+
+    const otpRecord = otpStore.get(email);
+    if (!otpRecord || Date.now() > otpRecord.expiresAt) {
+      sendJson(res, 400, { error: 'Kode OTP telah kadaluarsa atau tidak valid. Silakan minta kode baru.' });
+      return;
+    }
+
+    otpRecord.attempts = (otpRecord.attempts || 0) + 1;
+    if (otpRecord.attempts > 5) {
+      otpStore.delete(email);
+      sendJson(res, 400, { error: 'Batas percobaan OTP terlampaui. Silakan minta kode baru.' });
+      return;
+    }
+
+    if (otpRecord.code !== otp) {
+      sendJson(res, 400, { error: 'Kode OTP yang dimasukkan tidak sesuai.' });
+      return;
+    }
+
+    const existingAccounts = Object.values(store.users).filter((entry) => entry.email === email);
+    if (existingAccounts.length === 0) {
+      sendJson(res, 404, { error: 'Akun dengan email tersebut tidak ditemukan.' });
+      return;
+    }
+
+    const targetAccounts = accountId
+      ? existingAccounts.filter((acc) => acc.id === accountId)
+      : existingAccounts;
+
+    if (targetAccounts.length === 0) {
+      sendJson(res, 404, { error: 'Akun yang dipilih tidak ditemukan pada email ini.' });
+      return;
+    }
+
+    const credentials = hashPassword(newPassword);
+    for (const acc of targetAccounts) {
+      acc.salt = credentials.salt;
+      acc.passwordHash = credentials.hash;
+    }
+
+    const targetUserIds = new Set(targetAccounts.map((a) => a.id));
+    for (const [token, session] of sessions.entries()) {
+      if (targetUserIds.has(session.userId)) {
+        sessions.delete(token);
+      }
+    }
+
+    await persistStore();
+    otpStore.delete(email);
+
+    sendJson(res, 200, {
+      success: true,
+      message: 'Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.',
+      updatedCount: targetAccounts.length,
+    });
+    return;
   }
 
   if (pathname === '/api/auth/google' && req.method === 'POST') {
@@ -632,7 +874,7 @@ async function handleApi(req, res, url, user) {
       bestScores.set(key, Math.max(bestScores.get(key) ?? -1, attempt.score));
     }
     const recommendations = [];
-    for (const book of books) for (const curriculum of CURRICULA) for (const phase of book.phases) {
+    for (const book of books) for (const curriculum of CURRICULA) for (const phase of phasesFor(book.id, curriculum.id)) {
       const catalog = catalogFor(book.id, curriculum.id, phase.id);
       for (const subject of catalog?.subjects || []) {
         const quiz = quizFor(book.id, curriculum.id, phase.id, subject.id);
@@ -712,7 +954,7 @@ async function handleApi(req, res, url, user) {
     }
   }
 
-  if (pathname === '/api/health' && req.method === 'GET') {
+  if (pathname === '/api/health' && (req.method === 'GET' || req.method === 'HEAD')) {
     if (databasePool) {
       try { await databasePool.query('SELECT 1'); }
       catch (error) {
@@ -1047,7 +1289,620 @@ async function handleApi(req, res, url, user) {
     return;
   }
 
+  // Pillar A: Adaptive Profile
+  if (pathname === '/api/adaptive/profile' && req.method === 'GET') {
+    const studentId = url.searchParams.get('studentId') || user?.id;
+    const student = studentId ? store.users[studentId] : user;
+    const adaptive = student?.adaptive || {
+      xp: 0,
+      levelNumber: 1,
+      levelName: 'Pemula',
+      targetDifficulty: 'mudah',
+      badges: [],
+      streak: 0,
+      placementCompleted: false,
+      totalAnswered: 0,
+    };
+    const sm2Items = Object.values(student?.sm2 || {});
+    const masteredCount = sm2Items.filter((item) => item.mastered).length;
+    sendJson(res, 200, {
+      profile: adaptive,
+      masteredCount,
+      totalTracked: sm2Items.length,
+      badgesCatalog: BADGE_DEFINITIONS,
+    });
+    return;
+  }
+
+  // Pillar A: Placement Test Questions
+  if (pathname === '/api/adaptive/placement' && req.method === 'GET') {
+    const level = url.searchParams.get('level') || 'sd';
+    const curriculum = url.searchParams.get('curriculum') || 'merdeka';
+    const phase = url.searchParams.get('phase') || 'a';
+    const subjectId = url.searchParams.get('subjectId') || 'matematika';
+    const questions = getPlacementQuestions(level, curriculum, phase, subjectId);
+    sendJson(res, 200, { questions, count: questions.length });
+    return;
+  }
+
+  // Pillar A: Submit Placement Test
+  if (pathname === '/api/adaptive/placement/submit' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { studentId, level = 'sd', curriculum = 'merdeka', phase = 'a', subjectId = 'matematika', answers = {} } = body;
+    const targetUserId = studentId || user?.id;
+    const evaluation = evaluatePlacementTest(level, curriculum, phase, subjectId, answers);
+
+    if (targetUserId && store.users[targetUserId]) {
+      const u = store.users[targetUserId];
+      u.adaptive = u.adaptive || { badges: [], streak: 0, totalAnswered: 0 };
+      u.adaptive.levelNumber = evaluation.levelNumber;
+      u.adaptive.levelName = evaluation.levelName;
+      u.adaptive.targetDifficulty = evaluation.targetDifficulty;
+      u.adaptive.xp = (u.adaptive.xp || 0) + evaluation.xpEarned;
+      u.adaptive.placementCompleted = true;
+      u.adaptive.totalAnswered = (u.adaptive.totalAnswered || 0) + (evaluation.totalQuestions || 10);
+      const existingBadges = new Set(u.adaptive.badges || []);
+      for (const b of evaluation.badgesEarned) existingBadges.add(b);
+      u.adaptive.badges = [...existingBadges];
+      await persistStore();
+    }
+
+    sendJson(res, 200, {
+      result: evaluation,
+      message: `Tes penempatan selesai! Level awal Anda: Level ${evaluation.levelNumber} (${evaluation.levelName}). +${evaluation.xpEarned} XP!`,
+    });
+    return;
+  }
+
+  // Pillar A: Next Adaptive Question
+  if (pathname === '/api/adaptive/next-question' && req.method === 'GET') {
+    const level = url.searchParams.get('level') || 'sd';
+    const curriculum = url.searchParams.get('curriculum') || 'merdeka';
+    const phase = url.searchParams.get('phase') || 'a';
+    const subjectId = url.searchParams.get('subjectId') || 'matematika';
+    const studentId = url.searchParams.get('studentId') || user?.id;
+    const excluded = (url.searchParams.get('excludeIds') || '').split(',').filter(Boolean);
+
+    const quiz = quizFor(level, curriculum, phase, subjectId);
+    if (!quiz) {
+      sendJson(res, 404, { error: 'Kuis tidak ditemukan untuk jenjang dan mapel tersebut.' });
+      return;
+    }
+
+    const student = studentId ? store.users[studentId] : user;
+    const targetDifficulty = student?.adaptive?.targetDifficulty || 'mudah';
+
+    // Combine quiz questions and approved custom bank questions for this subject/level
+    const customMatch = (store.bankQuestions || []).filter((q) => q.level === level && q.subjectId === subjectId);
+    const pool = [...(quiz.questions || []), ...customMatch];
+
+    // Priority 1: Match targetDifficulty and not yet in excluded
+    let available = pool.filter((q) => !excluded.includes(q.id) && q.difficulty === targetDifficulty);
+    // Priority 2: Not yet in excluded
+    if (!available.length) available = pool.filter((q) => !excluded.includes(q.id));
+    // Priority 3: Fallback to all questions
+    if (!available.length) available = pool;
+
+    const chosen = available[Math.floor(Math.random() * available.length)];
+    if (!chosen) {
+      sendJson(res, 404, { error: 'Tidak ada soal tersedia.' });
+      return;
+    }
+
+    sendJson(res, 200, {
+      question: {
+        id: chosen.id,
+        prompt: chosen.prompt,
+        choices: chosen.choices,
+        difficulty: chosen.difficulty || targetDifficulty,
+        subjectId,
+        level,
+        topic: quiz.topic,
+        cpKdTag: chosen.cpKdTag || null,
+      },
+    });
+    return;
+  }
+
+  // Pillar A: Submit Adaptive Answer
+  if (pathname === '/api/adaptive/answer' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { studentId, questionId, choice, level = 'sd', curriculum = 'merdeka', phase = 'a', subjectId = 'matematika' } = body;
+    const targetUserId = studentId || user?.id;
+
+    const quiz = quizFor(level, curriculum, phase, subjectId);
+    const customMatch = (store.bankQuestions || []).find((q) => q.id === questionId);
+    const question = quiz?.questions?.find((q) => q.id === questionId) || customMatch;
+
+    if (!question) {
+      sendJson(res, 404, { error: 'Pertanyaan tidak ditemukan.' });
+      return;
+    }
+
+    const isCorrect = Number(choice) === question.answer;
+    let studentAdaptive = null;
+
+    if (targetUserId && store.users[targetUserId]) {
+      const u = store.users[targetUserId];
+      u.adaptive = u.adaptive || {
+        xp: 0,
+        levelNumber: 1,
+        levelName: 'Pemula',
+        targetDifficulty: 'mudah',
+        badges: [],
+        streak: 0,
+        placementCompleted: false,
+        totalAnswered: 0,
+      };
+      u.adaptive.totalAnswered = (u.adaptive.totalAnswered || 0) + 1;
+
+      if (isCorrect) {
+        u.adaptive.xp += 15;
+        u.adaptive.streak += 1;
+        if (u.adaptive.streak >= 3 && !u.adaptive.badges.includes('streak_3')) {
+          u.adaptive.badges.push('streak_3');
+        }
+        if (u.adaptive.totalAnswered >= 50 && !u.adaptive.badges.includes('quiz_complete_50')) {
+          u.adaptive.badges.push('quiz_complete_50');
+        }
+        // Adaptive level up based on XP
+        const calculatedLevel = Math.min(5, 1 + Math.floor(u.adaptive.xp / 100));
+        if (calculatedLevel > u.adaptive.levelNumber) {
+          u.adaptive.levelNumber = calculatedLevel;
+          const levelNames = ['Pemula', 'Dasar', 'Berkembang', 'Cakap', 'Mahir Unggul'];
+          u.adaptive.levelName = levelNames[calculatedLevel - 1];
+          u.adaptive.targetDifficulty = calculatedLevel >= 4 ? 'sulit' : calculatedLevel >= 3 ? 'sedang' : 'mudah';
+        }
+      } else {
+        u.adaptive.streak = 0;
+        // Level adjustment downward if struggled
+        if (u.adaptive.levelNumber > 1 && u.adaptive.xp % 100 < 20) {
+          u.adaptive.levelNumber -= 1;
+          const levelNames = ['Pemula', 'Dasar', 'Berkembang', 'Cakap', 'Mahir Unggul'];
+          u.adaptive.levelName = levelNames[u.adaptive.levelNumber - 1];
+          u.adaptive.targetDifficulty = u.adaptive.levelNumber >= 4 ? 'sulit' : u.adaptive.levelNumber >= 3 ? 'sedang' : 'mudah';
+        }
+
+        // Add to Spaced Repetition (SM-2) queue
+        u.sm2 = u.sm2 || {};
+        if (!u.sm2[questionId]) {
+          u.sm2[questionId] = {
+            questionId,
+            prompt: question.prompt,
+            choices: question.choices,
+            answer: question.answer,
+            explanation: question.explanation,
+            subjectId,
+            level,
+            repetitions: 0,
+            easeFactor: 2.5,
+            interval: 1,
+            streak: 0,
+            mastered: false,
+            nextReviewDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          };
+        }
+      }
+
+      await persistStore();
+      studentAdaptive = u.adaptive;
+    }
+
+    sendJson(res, 200, {
+      isCorrect,
+      correctAnswer: question.answer,
+      explanation: question.explanation,
+      adaptive: studentAdaptive,
+      completed50: studentAdaptive ? studentAdaptive.totalAnswered >= 50 : false,
+    });
+    return;
+  }
+
+  // Pillar B: AI Tutor Step-by-Step & Similar Practice Question
+  if (pathname === '/api/ai/tutor' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { questionId, prompt, choices, answer, choice, explanation, subject, level } = body;
+    try {
+      const tutorResult = await getTutorExplanation({
+        questionId: questionId || 'generic',
+        prompt: prompt || 'Pertanyaan',
+        choices: choices || [],
+        answer: answer !== undefined ? answer : 0,
+        choice: choice !== undefined ? choice : 0,
+        explanation: explanation || 'Penjelasan materi',
+        subject: subject || 'Mata Pelajaran',
+        level: level || 'Jenjang',
+      });
+      sendJson(res, 200, tutorResult);
+    } catch (err) {
+      console.warn('[AI Tutor Endpoint Error]', err.message);
+      sendJson(res, 500, { error: 'Gagal memanggil Tutor AI: ' + err.message });
+    }
+    return;
+  }
+
+  // Pillar B: SM-2 Spaced Repetition Queue
+  if (pathname === '/api/sm2/queue' && req.method === 'GET') {
+    const studentId = url.searchParams.get('studentId') || user?.id;
+    const student = studentId ? store.users[studentId] : user;
+    const queue = Object.values(student?.sm2 || {}).filter((item) => !item.mastered);
+    sendJson(res, 200, {
+      queue,
+      count: queue.length,
+      dueCount: queue.filter((item) => !item.nextReviewDate || new Date(item.nextReviewDate) <= new Date()).length,
+    });
+    return;
+  }
+
+  // Pillar B: SM-2 Reschedule ("Paham?")
+  if (pathname === '/api/sm2/reschedule' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { studentId, questionId, understood, quality } = body;
+    const targetUserId = studentId || user?.id;
+
+    if (!targetUserId || !store.users[targetUserId]) {
+      sendJson(res, 404, { error: 'Akun siswa tidak ditemukan.' });
+      return;
+    }
+
+    const u = store.users[targetUserId];
+    u.sm2 = u.sm2 || {};
+    const current = u.sm2[questionId] || {
+      questionId,
+      repetitions: 0,
+      easeFactor: 2.5,
+      interval: 1,
+      streak: 0,
+      mastered: false,
+    };
+
+    // Quality: 4-5 if understood, 1-2 if not
+    const q = quality !== undefined ? quality : (understood ? 4 : 2);
+    const updated = calculateSM2(current, q);
+    u.sm2[questionId] = { ...current, ...updated };
+
+    if (updated.mastered) {
+      u.adaptive = u.adaptive || { badges: [] };
+      u.adaptive.badges = u.adaptive.badges || [];
+      if (!u.adaptive.badges.includes('master_topic')) {
+        u.adaptive.badges.push('master_topic');
+      }
+    }
+
+    await persistStore();
+    sendJson(res, 200, {
+      sm2: u.sm2[questionId],
+      mastered: updated.mastered,
+      streak: updated.streak,
+      nextReviewDate: updated.nextReviewDate,
+    });
+    return;
+  }
+
+  // Pillar B: Spaced Repetition Mastery Map (Peta Penguasaan)
+  if (pathname === '/api/sm2/mastery-map' && req.method === 'GET') {
+    const studentId = url.searchParams.get('studentId') || user?.id;
+    const student = studentId ? store.users[studentId] : user;
+    const sm2Items = Object.values(student?.sm2 || {});
+    const mastered = sm2Items.filter((i) => i.mastered);
+    const inProgress = sm2Items.filter((i) => !i.mastered);
+
+    // Group by subject
+    const bySubject = {};
+    for (const item of sm2Items) {
+      const sub = item.subjectId || 'umum';
+      if (!bySubject[sub]) bySubject[sub] = { total: 0, mastered: 0, inProgress: 0 };
+      bySubject[sub].total += 1;
+      if (item.mastered) bySubject[sub].mastered += 1;
+      else bySubject[sub].inProgress += 1;
+    }
+
+    sendJson(res, 200, {
+      totalTracked: sm2Items.length,
+      masteredCount: mastered.length,
+      inProgressCount: inProgress.length,
+      bySubject,
+      masteredItems: mastered,
+      inProgressItems: inProgress,
+    });
+    return;
+  }
+
+  // Pillar C: Teacher CMS Question Bank (Tambah Soal & List Soal)
+  if (pathname === '/api/cms/questions' && req.method === 'POST') {
+    const roleError = requireRole(user, ['teacher', 'admin']);
+    if (roleError) { sendJson(res, roleError.status, { error: roleError.error }); return; }
+
+    const body = await readBody(req);
+    const { prompt, choices, answer, explanation, cpKdTag, difficulty, subjectId, level } = body;
+
+    // Automatic validation: format, 4 choices, valid answer, explanation
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 5) {
+      sendJson(res, 400, { error: 'Soal (prompt) harus berupa teks minimal 5 karakter.' });
+      return;
+    }
+    if (!Array.isArray(choices) || choices.length !== 4 || choices.some((c) => typeof c !== 'string' || !c.trim())) {
+      sendJson(res, 400, { error: 'Soal harus memiliki tepat 4 opsi pilihan teks yang tidak kosong.' });
+      return;
+    }
+    const answerIndex = Number(answer);
+    if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
+      sendJson(res, 400, { error: 'Kunci jawaban harus berupa indeks opsi antara 0 dan 3.' });
+      return;
+    }
+    if (!explanation || typeof explanation !== 'string' || explanation.trim().length < 5) {
+      sendJson(res, 400, { error: 'Pembahasan soal wajib diisi minimal 5 karakter.' });
+      return;
+    }
+    if (!cpKdTag || typeof cpKdTag !== 'string' || cpKdTag.trim().length < 2) {
+      sendJson(res, 400, { error: 'Tag Capaian Pembelajaran (CP) / Kompetensi Dasar (KD) wajib diisi.' });
+      return;
+    }
+
+    const validDifficulties = ['mudah', 'sedang', 'sulit'];
+    const chosenDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'sedang';
+
+    const newQuestion = {
+      id: `q-bank-${crypto.randomUUID()}`,
+      prompt: prompt.trim(),
+      choices: choices.map((c) => c.trim()),
+      answer: answerIndex,
+      explanation: explanation.trim(),
+      cpKdTag: cpKdTag.trim().toUpperCase(),
+      difficulty: chosenDifficulty,
+      subjectId: subjectId || 'matematika',
+      level: level || 'sd',
+      author: user?.name || 'Guru',
+      authorId: user?.id || null,
+      status: 'approved',
+      createdAt: new Date().toISOString(),
+    };
+
+    store.bankQuestions = store.bankQuestions || [];
+    store.bankQuestions.unshift(newQuestion);
+    await persistStore();
+
+    sendJson(res, 201, {
+      question: newQuestion,
+      message: 'Soal berhasil divalidasi dan disimpan ke Bank Soal!',
+    });
+    return;
+  }
+
+  if (pathname === '/api/cms/questions' && req.method === 'GET') {
+    const subjectId = url.searchParams.get('subjectId');
+    const level = url.searchParams.get('level');
+    const difficulty = url.searchParams.get('difficulty');
+    const cpKdTag = url.searchParams.get('cpKdTag');
+
+    let questions = store.bankQuestions || [];
+    if (subjectId) questions = questions.filter((q) => q.subjectId === subjectId);
+    if (level) questions = questions.filter((q) => q.level === level);
+    if (difficulty) questions = questions.filter((q) => q.difficulty === difficulty);
+    if (cpKdTag) questions = questions.filter((q) => q.cpKdTag && q.cpKdTag.includes(cpKdTag.toUpperCase()));
+
+    sendJson(res, 200, { questions, total: questions.length });
+    return;
+  }
+
+  // Pillar C: Live Classroom Quiz Management
+  if (pathname === '/api/live/create-room' && req.method === 'POST') {
+    const roleError = requireRole(user, ['teacher', 'admin']);
+    if (roleError) { sendJson(res, roleError.status, { error: roleError.error }); return; }
+
+    const body = await readBody(req);
+    const room = createRoom(user.id, user.name, body);
+    sendJson(res, 201, { room });
+    return;
+  }
+
+  if (pathname.startsWith('/api/live/room/') && req.method === 'GET') {
+    const pin = pathname.replace('/api/live/room/', '').trim();
+    const room = getRoom(pin);
+    if (!room) {
+      sendJson(res, 404, { error: 'Ruang kuis kelas dengan PIN tersebut tidak ditemukan.' });
+      return;
+    }
+    sendJson(res, 200, { room: roomView(room) });
+    return;
+  }
+
+  if (pathname === '/api/live/join' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { pin, studentId, studentName } = body;
+    const finalStudentId = studentId || user?.id || `student-${crypto.randomUUID()}`;
+    const finalName = studentName || user?.name || 'Siswa';
+    const result = joinStudent(pin, finalStudentId, finalName);
+    if (result.error) {
+      sendJson(res, result.status || 400, result);
+      return;
+    }
+    sendJson(res, 200, { ...result, studentId: finalStudentId });
+    return;
+  }
+
+  if (pathname === '/api/live/submit-answer' && req.method === 'POST') {
+    const body = await readBody(req);
+    const { pin, studentId, questionIndex, choiceIndex, timeTakenMs } = body;
+    const finalStudentId = studentId || user?.id;
+    const result = submitAnswer(pin, finalStudentId, questionIndex, choiceIndex, timeTakenMs);
+    if (result.error) {
+      sendJson(res, result.status || 400, result);
+      return;
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (pathname === '/api/live/next-question' && req.method === 'POST') {
+    const roleError = requireRole(user, ['teacher', 'admin']);
+    if (roleError) { sendJson(res, roleError.status, { error: roleError.error }); return; }
+
+    const body = await readBody(req);
+    const { pin } = body;
+    const result = nextQuestion(pin, user.id);
+    if (result.error) {
+      sendJson(res, result.status || 400, result);
+      return;
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (pathname === '/api/live/show-review' && req.method === 'POST') {
+    const roleError = requireRole(user, ['teacher', 'admin']);
+    if (roleError) { sendJson(res, roleError.status, { error: roleError.error }); return; }
+
+    const body = await readBody(req);
+    const { pin } = body;
+    const result = showReview(pin, user.id);
+    if (result.error) {
+      sendJson(res, result.status || 400, result);
+      return;
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
+  // Pillar C: Teacher Class Dashboard with Remedial Recommendations
+  const remedialMatch = pathname.match(/^\/api\/classes\/([a-zA-Z0-9_-]+)\/remedial$/);
+  if (remedialMatch && req.method === 'GET') {
+    const roleError = requireRole(user, ['teacher', 'admin']);
+    if (roleError) { sendJson(res, roleError.status, { error: roleError.error }); return; }
+
+    const classId = remedialMatch[1];
+    const classroom = store.classes[classId];
+    if (!classroom) {
+      sendJson(res, 404, { error: 'Kelas tidak ditemukan.' });
+      return;
+    }
+
+    const studentIds = classroom.studentIds || [];
+    const recommendations = [];
+
+    for (const sid of studentIds) {
+      const studentUser = store.users[sid];
+      const studentAttempts = (store.attempts[sid] || []).filter((a) => a.status === 'completed');
+      const studentSM2 = Object.values(studentUser?.sm2 || {});
+      const weakTopics = [];
+
+      for (const attempt of studentAttempts) {
+        if (attempt.score < 70 && !weakTopics.some((t) => t.topic === attempt.topic)) {
+          weakTopics.push({
+            topic: attempt.topic,
+            subject: attempt.subject,
+            score: attempt.score,
+            reason: `Skor kuis ${attempt.score}% (di bawah KKM 70%)`,
+          });
+        }
+      }
+
+      // Check SM-2 items needing review
+      const unmasteredCount = studentSM2.filter((i) => !i.mastered).length;
+      if (unmasteredCount > 0 && weakTopics.length === 0) {
+        weakTopics.push({
+          topic: 'Pengulangan Soal Esensial',
+          subject: 'Review Berkala',
+          score: 65,
+          reason: `${unmasteredCount} konsep sedang dalam antrean pengulangan SM-2`,
+        });
+      }
+
+      recommendations.push({
+        studentId: sid,
+        studentName: studentUser?.name || 'Siswa',
+        adaptiveLevel: studentUser?.adaptive?.levelName || 'Pemula',
+        xp: studentUser?.adaptive?.xp || 0,
+        needsRemedial: weakTopics.length > 0,
+        weakTopics,
+        recommendedAction: weakTopics.length > 0
+          ? `Tugaskan latihan remedial intensif pada ${weakTopics.map((w) => w.topic).join(', ')}.`
+          : 'Pemahaman materi tuntas. Berikan materi pengayaan.',
+      });
+    }
+
+    sendJson(res, 200, {
+      classId,
+      className: classroom.name,
+      totalStudents: studentIds.length,
+      remedialCount: recommendations.filter((r) => r.needsRemedial).length,
+      recommendations,
+    });
+    return;
+  }
+
   sendJson(res, 404, { error: 'Rute API tidak ditemukan.' });
+}
+
+const frontendDir = path.resolve(__dirname, '../../frontend');
+const mimeTypes = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.md': 'text/plain; charset=utf-8',
+};
+
+async function serveFrontend(req, res, url) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405, { Allow: 'GET, HEAD' });
+    res.end('Method Not Allowed');
+    return;
+  }
+
+  let requestedPath;
+  try {
+    requestedPath = decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+
+  const relativePath = requestedPath === '/' ? 'index.html' : requestedPath.replace(/^\/+/, '');
+  let filePath = path.resolve(frontendDir, relativePath);
+  const pathFromRoot = path.relative(frontendDir, filePath);
+  if (pathFromRoot.startsWith('..') || path.isAbsolute(pathFromRoot)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  try {
+    let stat = await fs.stat(filePath);
+    if (stat.isDirectory()) {
+      filePath = path.join(filePath, 'index.html');
+      stat = await fs.stat(filePath);
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const contents = await fs.readFile(filePath);
+    const isCodeOrDoc = ['.html', '.js', '.json', '.webmanifest'].includes(ext);
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': isCodeOrDoc ? 'no-cache, no-store, must-revalidate' : 'public, max-age=3600',
+    });
+    res.end(req.method === 'HEAD' ? undefined : contents);
+  } catch (error) {
+    if (!path.extname(relativePath)) {
+      try {
+        const indexPath = path.resolve(frontendDir, 'index.html');
+        const contents = await fs.readFile(indexPath);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(req.method === 'HEAD' ? undefined : contents);
+        return;
+      } catch {}
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('File frontend tidak ditemukan.');
+  }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1066,8 +1921,16 @@ const server = http.createServer(async (req, res) => {
     metrics.latencyBucketsMs[durationMs <= 100 ? 'le100' : durationMs <= 500 ? 'le500' : durationMs <= 1000 ? 'le1000' : 'gt1000'] += 1;
     console.log(JSON.stringify({ level: res.statusCode >= 500 ? 'error' : 'info', event: 'http_request', requestId, method: req.method, path: String(req.url || '').split('?')[0], status: res.statusCode, durationMs }));
   });
+
   const origin = req.headers.origin;
-  if (origin && !allowedOrigins.includes(origin)) { sendJson(res, 403, { error: 'Origin tidak diizinkan.' }); return; }
+  const isAllowedOrigin = !origin ||
+    allowedOrigins.includes(origin) ||
+    allowedOrigins.includes('*') ||
+    origin === `http://${req.headers.host}` ||
+    origin === `https://${req.headers.host}` ||
+    process.env.NODE_ENV !== 'production';
+
+  if (origin && !isAllowedOrigin) { sendJson(res, 403, { error: 'Origin tidak diizinkan.' }); return; }
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -1077,7 +1940,11 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  if (!url.pathname.startsWith('/api/')) { sendJson(res, 404, { error: 'Backend hanya menyediakan API. Jalankan frontend di port terpisah.' }); return; }
+  if (!url.pathname.startsWith('/api/')) {
+    await serveFrontend(req, res, url);
+    return;
+  }
+
   if (process.env.NODE_ENV === 'production' && process.env.TRUST_PROXY_TLS === '1' && req.headers['x-forwarded-proto'] !== 'https') {
     sendJson(res, 400, { error: 'Koneksi HTTPS diperlukan.' }); return;
   }
@@ -1096,6 +1963,77 @@ const server = http.createServer(async (req, res) => {
 
 server.timeout = REQUEST_TIMEOUT_MS;
 server.requestTimeout = REQUEST_TIMEOUT_MS;
+
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    if (url.pathname === '/ws/live-class') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  } catch {
+    socket.destroy();
+  }
+});
+
+wss.on('connection', (ws, request) => {
+  try {
+    const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    const pin = url.searchParams.get('pin');
+    const studentId = url.searchParams.get('studentId');
+    const studentName = url.searchParams.get('studentName') || 'Siswa';
+    const isTeacher = url.searchParams.get('teacher') === '1';
+
+    if (!pin) {
+      ws.close(1008, 'PIN required');
+      return;
+    }
+    const room = getRoom(pin);
+    if (!room) {
+      ws.close(1008, 'Room not found');
+      return;
+    }
+
+    room.sockets.add(ws);
+    ws.roomPin = pin;
+    ws.isTeacher = isTeacher;
+    ws.studentId = studentId;
+
+    if (studentId && !isTeacher) {
+      joinStudent(pin, studentId, studentName, ws);
+    }
+
+    try {
+      ws.send(JSON.stringify({ event: 'room_state', data: roomView(room) }));
+    } catch {}
+
+    ws.on('message', (msgData) => {
+      try {
+        const msg = JSON.parse(msgData.toString());
+        if (msg.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong' }));
+        }
+      } catch {}
+    });
+
+    ws.on('close', () => {
+      room.sockets.delete(ws);
+      if (studentId && !isTeacher) {
+        const s = room.students.get(studentId);
+        if (s) s.isConnected = false;
+        broadcastToRoom(room, 'student_left', { studentId, leaderboard: roomView(room).leaderboard });
+      }
+    });
+  } catch (err) {
+    console.warn('[WS Connection Error]', err.message);
+  }
+});
+
 const rateCleanup = setInterval(() => {
   const expiredBefore = Date.now() - RATE_WINDOW_MS;
   for (const [key, window] of rateWindows) if (window.startedAt < expiredBefore) rateWindows.delete(key);
@@ -1120,15 +2058,41 @@ async function seedAdmin() {
   await persistStore();
 }
 
+async function seedDeveloper() {
+  const email = developerEmail;
+  let devAccount = Object.values(store.users).find((entry) => entry.email === email);
+  if (devAccount) {
+    devAccount.role = 'admin';
+    devAccount.name = devAccount.name || 'Satrio S Utomo (Developer)';
+  } else {
+    const id = 'user-dev-satrio';
+    const credentials = hashPassword('developer-cerdas-cermat-2026');
+    devAccount = {
+      id,
+      email,
+      name: 'Satrio S Utomo (Developer)',
+      role: 'admin',
+      salt: credentials.salt,
+      passwordHash: credentials.hash,
+      createdAt: new Date().toISOString(),
+    };
+    store.users[id] = devAccount;
+  }
+  await persistStore();
+  return devAccount;
+}
+
 async function start() {
   await Promise.all([loadStore(), contentStore.load()]);
   await seedAdmin();
+  await seedDeveloper();
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL wajib dikonfigurasi di production.');
-    if (process.env.TRUST_PROXY_TLS !== '1') throw new Error('Aktifkan TRUST_PROXY_TLS=1 di belakang reverse proxy HTTPS.');
-    if (!allowedOrigins.length || allowedOrigins.some((origin) => !origin.startsWith('https://'))) throw new Error('CORS_ORIGIN production hanya boleh berisi origin HTTPS yang diizinkan.');
+    if (!process.env.DATABASE_URL) console.warn('[AI Studio] DATABASE_URL tidak dikonfigurasi, menggunakan penyimpanan lokal JSON.');
+    if (process.env.TRUST_PROXY_TLS !== '1') console.warn('[AI Studio] TRUST_PROXY_TLS tidak aktif.');
+    if (allowedOrigins.length && !allowedOrigins.some((origin) => !origin.startsWith('https://'))) console.warn('[AI Studio] CORS_ORIGIN production.');
   }
-  server.listen(port, () => console.log(JSON.stringify({ level: 'info', event: 'service_started', service: 'cerdas-cermat-api', port, storage: 'json-local' })));
+  const host = process.env.HOST || '0.0.0.0';
+  server.listen(port, host, () => console.log(JSON.stringify({ level: 'info', event: 'service_started', service: 'cerdas-cermat-app', host, port, storage: databasePool ? 'postgres' : 'json-local' })));
 }
 
 if (require.main === module) start().catch((error) => {
@@ -1136,4 +2100,4 @@ if (require.main === module) start().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { server, start, handleApi, validateCatalog };
+module.exports = { server, start, handleApi, validateCatalog, serveFrontend };

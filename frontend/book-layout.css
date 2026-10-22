@@ -107,7 +107,7 @@
 .question-feedback { padding-top: 4px; font-size: 8px; }
 .page-bottom { left: 28px; right: 28px; bottom: 12px; }
 .page-bottom .page-number { position: absolute; left: 50%; transform: translateX(-50%); }
-.page-instruction { position: absolute; right: 12px; bottom: 10px; color: #9a927f; font: italic 8px var(--serif); text-align: right; }
+.page-instruction { margin-left: auto; color: #9a927f; font: italic 8px var(--serif); text-align: right; }
 
 .contents-item {
   width: 100%;
@@ -144,7 +144,7 @@
   .flip-face { padding-left: 22px; padding-right: 22px; }
   .page-bottom { left: 22px; right: 22px; }
   .page-bottom .page-number { left: 0; transform: none; }
-  .page-instruction { right: 12px; }
+  .page-instruction { max-width: 48%; }
 }
 
 @media (min-width: 651px) and (max-width: 900px) {
@@ -202,7 +202,7 @@
   .flip-face { padding: 18px 20px 42px; }
   .book-spine { display: none; }
   .page-bottom { left: 20px; right: 20px; bottom: 12px; }
-  .page-instruction { right: 10px; bottom: 10px; font-size: 6px; }
+  .page-instruction { max-width: 56%; font-size: 6px; }
   .quiz-page-title { font-size: 19px; }
   .question-prompt { font-size: 10px; }
   .choice { min-height: 22px; font-size: 9px; }

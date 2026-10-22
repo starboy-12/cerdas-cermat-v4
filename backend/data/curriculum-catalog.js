@@ -2,6 +2,8 @@ const CURRICULUM_NOTES = {
   merdeka: 'Peta materi awal berdasarkan fase dan Capaian Pembelajaran. Muatan lokal dan mata pelajaran pilihan mengikuti ketersediaan sekolah. Setiap mapel memiliki kuis latihan 50 soal yang masih berupa draf dan perlu ditelaah guru.',
   k13: 'Peta materi awal Kurikulum 2013. Guru perlu mengaitkan topik dengan Kompetensi Dasar dan kelas yang digunakan sekolah. Setiap mapel memiliki kuis latihan 50 soal yang masih berupa draf dan perlu ditelaah guru.',
   darurat: 'Katalog arsip pembelajaran esensial yang mengacu pada penyederhanaan K13; bukan kurikulum nasional aktif yang berdiri sendiri. Setiap mapel memiliki kuis latihan 50 soal yang masih berupa draf dan perlu ditelaah guru.',
+  kbk: 'Katalog arsip ringkas yang mengacu pada pendekatan Kurikulum Berbasis Kompetensi 2004. Pengelompokan kelas dan mata pelajaran adalah peta awal, bukan salinan dokumen resmi; sekolah dan jenjang dapat berbeda. Materi serta kuis perlu ditelaah guru.',
+  ktsp: 'Katalog arsip ringkas Kurikulum Tingkat Satuan Pendidikan 2006. Pengelompokan kelas dan mata pelajaran adalah peta awal, bukan salinan dokumen resmi; KTSP memberi ruang pengembangan kurikulum pada satuan pendidikan. Materi serta kuis perlu ditelaah guru.',
 };
 
 const SUBJECTS = {
@@ -62,6 +64,37 @@ const PHASES = {
   sma: [{ id: 'e', label: 'Fase E · Kelas 10' }, { id: 'f', label: 'Fase F · Kelas 11–12' }],
 };
 
+function legacyPhasesFor(levelId) {
+  if (levelId === 'tk') return [
+    { id: 'kelompok-a', label: 'Kelompok A · usia 4–5 tahun', templatePhaseId: 'fondasi' },
+    { id: 'kelompok-b', label: 'Kelompok B · usia 5–6 tahun', templatePhaseId: 'fondasi' },
+  ];
+  const grades = levelId === 'sd' ? [1, 2, 3, 4, 5, 6]
+    : levelId === 'smp' ? [7, 8, 9]
+      : levelId === 'sma' ? [10, 11, 12] : [];
+  return grades.map((grade) => {
+    const templatePhaseId = levelId === 'sd' ? (grade <= 2 ? 'a' : grade <= 4 ? 'b' : 'c')
+      : levelId === 'smp' ? 'd' : grade === 10 ? 'e' : 'f';
+    return {
+      id: `kelas-${grade}`,
+      label: `Kelas ${grade}`,
+      templatePhaseId,
+    };
+  });
+}
+
+function phasesFor(levelId, curriculum) {
+  if (!CURRICULUM_DEFINITIONS[curriculum]) return [];
+  return curriculum === 'merdeka'
+    ? (PHASES[levelId] || [])
+    : legacyPhasesFor(levelId);
+}
+
+function phaseDefinitionId(levelId, curriculum, phaseId) {
+  const phase = phasesFor(levelId, curriculum).find((item) => item.id === phaseId);
+  return phase?.templatePhaseId || (curriculum === 'merdeka' ? phaseId : null);
+}
+
 const MERDEKA = {
   'tk.fondasi': [['agama'], ['jati'], ['literasi']],
   'sd.a': [['agama'], ['pancasila'], ['indonesia'], ['matematika'], ['pjok'], ['seni'], ['english', 'optional'], ['mulok', 'local']],
@@ -92,18 +125,38 @@ const DARURAT = {
   'sma.f': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['pjok'], ['history'], ['k13Science', 'optional'], ['k13Social', 'optional'], ['k13Arts'], ['biologi', 'optional'], ['fisika', 'optional'], ['kimia', 'optional'], ['geography', 'optional'], ['economics', 'optional'], ['sociology', 'optional'], ['mulok', 'local']],
 };
 
+const KBK = {
+  'tk.fondasi': [['moral'], ['motorik'], ['kognitif'], ['bahasa'], ['sosial'], ['seni']],
+  'sd.a': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science', 'integrated'], ['k13Social', 'integrated'], ['k13Arts'], ['pjok'], ['mulok', 'local']],
+  'sd.b': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science'], ['k13Social'], ['k13Arts'], ['pjok'], ['mulok', 'local']],
+  'sd.c': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science'], ['k13Social'], ['k13Arts'], ['pjok'], ['mulok', 'local']],
+  'smp.d': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['k13Science'], ['k13Social'], ['pjok'], ['k13Arts'], ['prakarya'], ['mulok', 'local']],
+  'sma.e': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['pjok'], ['history'], ['k13Science', 'optional'], ['k13Social', 'optional'], ['k13Arts'], ['mulok', 'local']],
+  'sma.f': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['pjok'], ['history'], ['k13Arts'], ['biologi', 'optional'], ['kimia', 'optional'], ['fisika', 'optional'], ['geography', 'optional'], ['economics', 'optional'], ['sociology', 'optional'], ['mulok', 'local']],
+};
+
+const KTSP = {
+  'tk.fondasi': [['moral'], ['motorik'], ['kognitif'], ['bahasa'], ['sosial'], ['seni']],
+  'sd.a': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science', 'integrated'], ['k13Social', 'integrated'], ['k13Arts'], ['pjok'], ['mulok', 'local']],
+  'sd.b': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science'], ['k13Social'], ['k13Arts'], ['pjok'], ['english', 'school'], ['mulok', 'local']],
+  'sd.c': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['k13Science'], ['k13Social'], ['k13Arts'], ['pjok'], ['english', 'school'], ['mulok', 'local']],
+  'smp.d': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['k13Science'], ['k13Social'], ['pjok'], ['k13Arts'], ['prakarya'], ['mulok', 'local']],
+  'sma.e': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['pjok'], ['history'], ['k13Science', 'optional'], ['k13Social', 'optional'], ['k13Arts'], ['mulok', 'local']],
+  'sma.f': [['agama'], ['pkn'], ['indonesia'], ['matematika'], ['english'], ['pjok'], ['history'], ['k13Arts'], ['biologi', 'optional'], ['kimia', 'optional'], ['fisika', 'optional'], ['geography', 'optional'], ['economics', 'optional'], ['sociology', 'optional'], ['mulok', 'local']],
+};
+
 const CURRICULA = [
   { id: 'merdeka', name: 'Kurikulum Merdeka', status: 'Berlaku' },
   { id: 'k13', name: 'Kurikulum 2013', status: 'Berlaku' },
   { id: 'darurat', name: 'Kurikulum Darurat (arsip)', status: 'Arsip' },
+  { id: 'kbk', name: 'Kurikulum 2004 (KBK)', status: 'Arsip' },
+  { id: 'ktsp', name: 'Kurikulum 2006 (KTSP)', status: 'Arsip' },
 ];
 
+const CURRICULUM_DEFINITIONS = { merdeka: MERDEKA, k13: K13, darurat: DARURAT, kbk: KBK, ktsp: KTSP };
+
 function phaseLabel(levelId, phaseId, curriculum = 'merdeka') {
-  const phase = PHASES[levelId]?.find((item) => item.id === phaseId);
-  if (!phase) return '';
-  if (curriculum === 'merdeka') return phase.label;
-  const gradeGroup = phase.label.split('·').at(-1).trim();
-  return levelId === 'tk' ? `${gradeGroup} · area perkembangan` : `${gradeGroup} · pengelompokan kelas`;
+  return phasesFor(levelId, curriculum).find((item) => item.id === phaseId)?.label || '';
 }
 
 const PHASE_TOPICS = {
@@ -121,12 +174,43 @@ const PHASE_TOPICS = {
   'sma.f:english': ['Reading and evaluating authentic texts', 'Argumentative writing', 'Discussion and presentation', 'Language for academic contexts'],
 };
 
+const LEGACY_MATH_TOPICS = {
+  'sd.kelas-1': ['Bilangan sampai 20', 'Penjumlahan dan pengurangan sampai 20', 'Pola dan bentuk sederhana', 'Panjang dan waktu sehari-hari', 'Mengelompokkan dan membandingkan benda'],
+  'sd.kelas-2': ['Bilangan sampai 100', 'Penjumlahan dan pengurangan', 'Perkalian sebagai kelompok sama banyak', 'Pengukuran panjang dan waktu', 'Membaca tabel sederhana'],
+  'sd.kelas-3': ['Bilangan sampai 1.000', 'Perkalian dan pembagian dasar', 'Pecahan sederhana', 'Panjang, berat, dan waktu', 'Bangun datar dan data'],
+  'sd.kelas-4': ['Operasi bilangan cacah', 'Faktor, kelipatan, dan pecahan', 'Pengukuran dan satuan', 'Keliling dan luas bangun datar', 'Tabel dan diagram'],
+  'sd.kelas-5': ['Operasi bilangan besar', 'Pecahan dan desimal', 'Perbandingan dan skala', 'Luas dan volume', 'Penyajian dan pembacaan data'],
+  'sd.kelas-6': ['Operasi pecahan dan desimal', 'Persen dan perbandingan', 'Kecepatan dan debit sederhana', 'Luas dan volume bangun ruang', 'Statistika dan peluang sederhana'],
+  'smp.kelas-7': ['Bilangan bulat dan pecahan', 'Perbandingan dan aritmetika sosial', 'Bentuk aljabar dan persamaan sederhana', 'Garis, sudut, dan bangun datar', 'Data dan penyajian statistik'],
+  'smp.kelas-8': ['Pola bilangan dan relasi', 'Persamaan garis lurus', 'Sistem persamaan linear', 'Teorema Pythagoras dan bangun ruang', 'Peluang dan statistika'],
+  'smp.kelas-9': ['Pangkat, akar, dan bentuk baku', 'Persamaan dan fungsi kuadrat', 'Kesebangunan dan bangun ruang', 'Transformasi geometri', 'Peluang dan statistika'],
+  'sma.kelas-10': ['Persamaan dan pertidaksamaan', 'Fungsi dan grafik', 'Eksponen dan logaritma', 'Trigonometri dasar', 'Statistika dan peluang'],
+  'sma.kelas-11': ['Komposisi dan invers fungsi', 'Trigonometri dan barisan', 'Matriks dan vektor', 'Limit dan turunan dasar', 'Peluang dan distribusi'],
+  'sma.kelas-12': ['Fungsi dan pemodelan', 'Turunan dan penerapannya', 'Integral dasar', 'Program linear dan matriks', 'Statistika dan peluang'],
+};
+
+function gradeForPhase(levelId, phaseId, curriculum) {
+  if (curriculum !== 'merdeka') {
+    const match = phaseId.match(/^kelas-(\d+)$/);
+    if (match) return Number(match[1]);
+    if (phaseId === 'kelompok-b') return 6;
+    return 5;
+  }
+  if (levelId === 'sd') return ({ a: 2, b: 4, c: 6 })[phaseId] || 0;
+  if (levelId === 'smp') return 8;
+  if (levelId === 'sma') return phaseId === 'e' ? 10 : 12;
+  return 0;
+}
+
 function availableSubjects(levelId, curriculum, phaseId) {
-  const definition = (curriculum === 'k13' ? K13 : curriculum === 'darurat' ? DARURAT : MERDEKA)[`${levelId}.${phaseId}`];
+  const definitionPhase = phaseDefinitionId(levelId, curriculum, phaseId);
+  const definition = definitionPhase && CURRICULUM_DEFINITIONS[curriculum]?.[`${levelId}.${definitionPhase}`];
   if (!definition) return [];
   return definition.map(([id, availability = 'required']) => {
     const subject = SUBJECTS[id];
-    const topicTitles = PHASE_TOPICS[`${levelId}.${phaseId}:${id}`] || subject.topics;
+    const topicTitles = (id === 'matematika' && LEGACY_MATH_TOPICS[`${levelId}.${phaseId}`])
+      || PHASE_TOPICS[`${levelId}.${definitionPhase}:${id}`]
+      || subject.topics;
     const quizId = `${levelId}-${curriculum}-${phaseId}-${id}-quiz`;
     const topics = topicTitles.map((title, index) => ({
       id: `${id}-${index + 1}`,
@@ -292,17 +376,18 @@ function lessonPages(levelId, curriculum, phaseId, subjectId, topicId) {
 }
 
 function catalogFor(levelId, curriculum, phaseId) {
-  if (!CURRICULA.some((item) => item.id === curriculum) || !PHASES[levelId]?.some((item) => item.id === phaseId)) return null;
-  const curriculumNote = levelId === 'tk'
+  const phase = phaseLabel(levelId, phaseId, curriculum);
+  if (!phase || !CURRICULA.some((item) => item.id === curriculum)) return null;
+  const curriculumNote = levelId === 'tk' && curriculum === 'merdeka'
     ? `${CURRICULUM_NOTES[curriculum]} Untuk PAUD/TK, pilihan ditampilkan sebagai elemen atau area perkembangan dan aktivitas bermain, bukan daftar mapel formal.`
     : CURRICULUM_NOTES[curriculum];
   return {
     level: levelId,
     curriculum,
     curriculumNote,
-    phase: { id: phaseId, label: phaseLabel(levelId, phaseId, curriculum) },
+    phase: { id: phaseId, label: phase },
     subjects: availableSubjects(levelId, curriculum, phaseId),
   };
 }
 
-module.exports = { CURRICULA, PHASES, catalogFor, lessonsFor, lessonPages, CURRICULUM_NOTES };
+module.exports = { CURRICULA, PHASES, phasesFor, gradeForPhase, catalogFor, lessonsFor, lessonPages, CURRICULUM_NOTES };

@@ -1,8 +1,4 @@
-const CURRICULA = [
-  { id: 'merdeka', name: 'Kurikulum Merdeka' },
-  { id: 'k13', name: 'Kurikulum 2013' },
-  { id: 'darurat', name: 'Kurikulum Darurat' },
-];
+const { CURRICULA, phasesFor } = require('./curriculum-catalog');
 
 function randomFor(seed) {
   let value = seed >>> 0;
@@ -145,6 +141,7 @@ function publicBook(book) {
     objective: book.objective,
     phases: book.phases,
     defaultPhase: book.phases[0].id,
+    curriculumPhases: Object.fromEntries(CURRICULA.map(({ id }) => [id, phasesFor(book.id, id)])),
     pageCount: book.pages.length,
     questionCount: book.questionCount,
     questionsPerPage: 3,

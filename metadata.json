@@ -1,0 +1,8 @@
+{
+  "name": "Cerdas Cermat",
+  "description": "Buka buku Cerdas Cermat dan belajar sambil bermain. Ruang perpustakaan belajar interaktif dengan latihan kuis dan buku cerita bergambar.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

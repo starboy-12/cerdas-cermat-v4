@@ -1,0 +1,20 @@
+{
+  "name": "cerdas-cermat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Perpustakaan Belajar Cerdas Cermat",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "npm run lint",
+    "lint": "node --check server.js && node --check backend/src/server.js && node --check backend/src/sm2.js && node --check backend/src/ai-tutor.js && node --check backend/src/adaptive.js && node --check backend/src/live-classroom.js && node --check frontend/app.js && node --check frontend/pillars.js && node --check frontend/config.js && node --check frontend/ui-components.js",
+    "test": "node --test backend/test/*.test.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.30.0",
+    "google-auth-library": "^11.3.1",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  }
+}

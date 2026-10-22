@@ -58,6 +58,18 @@ function escaped(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
+async function safeJson(response) {
+  const contentType = response?.headers?.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 function setSyncStatus(online, detail = '') {
   const status = $('#sync-status');
   if (!status) return;
@@ -69,6 +81,13 @@ function setSyncStatus(online, detail = '') {
 
 function updateAccountControls() {
   $('#account-link').textContent = state.account ? `${state.account.name} · Akun` : 'Masuk';
+  const teacherCmsBtn = $('#teacher-cms-link');
+  if (teacherCmsBtn) {
+    teacherCmsBtn.hidden = !state.account || !['teacher', 'admin'].includes(state.account.role);
+  }
+  if (window.CerdasPillars?.loadAdaptiveProfile) {
+    window.CerdasPillars.loadAdaptiveProfile();
+  }
 }
 
 function cacheKey(url) { return `cerdas-cermat-cache:${url}`; }
@@ -125,7 +144,7 @@ async function flushOfflineQueue() {
       const headers = new Headers({ 'Content-Type': 'application/json' });
       if (state.token) headers.set('Authorization', `Bearer ${state.token}`);
       const response = await fetch(`${API}/sync/progress`, { method: 'POST', headers, body: JSON.stringify({ operations: batch }) });
-      const data = await response.json().catch(() => ({}));
+      const data = await safeJson(response);
       if (!response.ok) { showToast(`Sinkronisasi gagal: ${data.message || data.error || 'coba lagi nanti.'}`); break; }
       batch.forEach((operation, index) => updateAnsweredFromSync(state.offlineQueue[index], data.results[index]));
       state.offlineQueue.splice(0, batch.length);
@@ -148,10 +167,9 @@ async function request(url, options = {}) {
   let response = null;
   try {
     response = await fetch(url, { ...options, method, headers, signal: controller.signal });
-    let data;
-    try { data = await response.json(); } catch { throw new Error('Respons server tidak dapat dibaca.'); }
+    const data = await safeJson(response);
     if (!response.ok) {
-      const error = new Error(data.message || data.error || 'Terjadi kesalahan.');
+      const error = new Error(data.message || data.error || 'Terjadi kesalahan pada layanan.');
       error.status = response.status; error.code = data.code;
       throw error;
     }
@@ -159,7 +177,7 @@ async function request(url, options = {}) {
     if (method === 'GET') storeCachedRead(url, data);
     else void flushOfflineQueue();
     return data;
-  } catch {
+  } catch (error) {
     if (method === 'GET') {
       const cached = readCachedRead(url);
       if (cached) { setSyncStatus(false); return { ...cached, _offline: true }; }
@@ -171,7 +189,7 @@ async function request(url, options = {}) {
       return { saved: false, queued: true, pending: true };
     }
     setSyncStatus(navigator.onLine);
-    if (error.name === 'AbortError') error.message = 'Permintaan melewati batas waktu. Periksa koneksi lalu coba lagi.';
+    if (error && error.name === 'AbortError') error.message = 'Permintaan melewati batas waktu. Periksa koneksi lalu coba lagi.';
     throw error;
   } finally { clearTimeout(timeout); }
 }
@@ -236,7 +254,7 @@ async function loadSubjectOptions(preferredSubject = '', preferredTopic = '') {
       } catch { /* Pilihan lokal sekolah hanya ditambahkan saat katalog sekolah tersedia. */ }
     }
     state.curriculumCatalog = catalog;
-    const selectedPhase = book.phases.find((item) => item.id === phase);
+    const selectedPhase = curriculumPhasesFor(book, curriculum).find((item) => item.id === phase);
     if (selectedPhase) $('#phase-select').selectedOptions[0].textContent = phaseDisplayLabel(book, selectedPhase, curriculum);
     $('#subject-value').innerHTML = catalog.subjects.map((subject) => `<option value="${escaped(subject.id)}">${escaped(subject.name)} · ${escaped(subject.availabilityLabel)}</option>`).join('');
     const preferred = catalog.subjects.find((subject) => subject.id === preferredSubject)
@@ -289,18 +307,25 @@ function renderContents(pages, activeIndex = 0) {
   $('#contents-list').innerHTML = pages.map((page, index) => `<button type="button" class="contents-item ${index === activeIndex ? 'active' : ''}" data-goto-page="${index}"><span>${escaped(page.title)}</span><span class="leader"></span><span class="contents-page">${String(index + 1).padStart(2, '0')}</span></button>`).join('');
 }
 
-function phaseDisplayLabel(book, phase, curriculum) {
-  if (curriculum === 'merdeka') return phase.label;
-  const classGroup = phase.label.split('·').at(-1).trim();
-  return book.id === 'tk' ? `${classGroup} · area perkembangan` : `${classGroup} · pengelompokan kelas`;
+function curriculumPhasesFor(book, curriculum) {
+  return book.curriculumPhases?.[curriculum] || book.phases;
+}
+
+function phaseDisplayLabel(_book, phase) {
+  return phase.label;
 }
 
 function renderPhaseOptions(book, selectedPhase, curriculum) {
-  $('#phase-select').innerHTML = book.phases.map((phase) => `<option value="${escaped(phase.id)}">${escaped(phaseDisplayLabel(book, phase, curriculum))}</option>`).join('');
-  $('#phase-select').value = selectedPhase;
-  $('#phase-field-label').querySelector('span').textContent = curriculum === 'merdeka' ? 'Fase / kelas' : 'Kelompok kelas';
+  const phases = curriculumPhasesFor(book, curriculum);
+  $('#phase-select').innerHTML = phases.map((phase) => `<option value="${escaped(phase.id)}">${escaped(phaseDisplayLabel(book, phase))}</option>`).join('');
+  const resolvedPhase = phases.some((phase) => phase.id === selectedPhase) ? selectedPhase : phases[0]?.id || '';
+  $('#phase-select').value = resolvedPhase;
+  $('#phase-field-label').querySelector('span').textContent = curriculum === 'merdeka'
+    ? (book.id === 'tk' ? 'Fase / kelompok usia' : 'Fase / kelas')
+    : (book.id === 'tk' ? 'Kelompok usia' : 'Kelas');
   $('#subject-field-label').querySelector('span').textContent = book.id === 'tk' ? 'Elemen / area belajar' : 'Mata pelajaran';
   $('#topic-field-label').querySelector('span').textContent = book.id === 'tk' ? 'Materi / aktivitas' : 'Materi';
+  return resolvedPhase;
 }
 
 function openCatalog(bookId) {
@@ -309,10 +334,9 @@ function openCatalog(bookId) {
   state.catalogBook = book;
   state.catalogReturnFocus = document.activeElement;
   $('#catalog-level-copy').textContent = `Menyiapkan materi buku ${book.level}…`;
-  $('#curriculum-select').innerHTML = state.curricula.map((item) => `<option value="${escaped(item.id)}">${escaped(item.name)}</option>`).join('');
+  $('#curriculum-select').innerHTML = state.curricula.map((item) => `<option value="${escaped(item.id)}">${escaped(item.name)}${item.status === 'Arsip' ? ' · Arsip' : ''}</option>`).join('');
   $('#curriculum-select').value = state.curricula.some((item) => item.id === state.curriculum) ? state.curriculum : 'merdeka';
-  const selectedPhase = book.phases.some((item) => item.id === state.phase) ? state.phase : book.defaultPhase;
-  renderPhaseOptions(book, selectedPhase, $('#curriculum-select').value);
+  const selectedPhase = renderPhaseOptions(book, state.phase || book.defaultPhase, $('#curriculum-select').value);
   $('#catalog-note').textContent = 'Memuat peta mata pelajaran dan materi…';
   catalogDialog.classList.add('is-open');
   catalogDialog.setAttribute('aria-hidden', 'false');
@@ -453,7 +477,7 @@ async function openBook(bookId = state.catalogBook?.id, curriculum = $('#curricu
   }
   $('#reader-book-title').textContent = book.title;
   $('#reader-level').textContent = book.level;
-  $('#left-level-label').textContent = `${state.curricula.find((item) => item.id === curriculum)?.name || 'Kurikulum Merdeka'} · ${phase.toUpperCase()}`;
+  $('#left-level-label').textContent = `${state.curricula.find((item) => item.id === curriculum)?.name || 'Kurikulum Merdeka'} · ${state.curriculumCatalog?.phase.label || phase}`;
   $('#reader-subject').textContent = subject.name;
   if (state.mode === 'lesson') {
     try {
@@ -709,10 +733,50 @@ async function chooseAnswer(button) {
     const feedback = document.createElement('div');
     feedback.className = `question-feedback ${result.correct ? '' : 'is-wrong'}`;
     feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
-    feedback.textContent = `${result.correct ? 'Benar.' : 'Belum tepat.'} ${result.explanation}`;
+
+    if (result.correct) {
+      feedback.textContent = `Benar. ${result.explanation}`;
+    } else {
+      feedback.innerHTML = `
+        <p style="margin:0 0 6px;"><strong>Belum tepat.</strong> ${escaped(result.explanation)}</p>
+        <div class="feedback-sm2-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+          <span style="font-size:9.5px;color:#71746b;">Paham materi ini?</span>
+          <button type="button" class="sm2-action-btn" data-action="understood" data-qid="${escaped(questionId)}" style="border:1px solid #759273;background:#eef5ec;border-radius:3px;padding:3px 8px;font-size:9.5px;cursor:pointer;color:#284f2c;">✓ Paham (Jadwalkan SM-2)</button>
+          <button type="button" class="sm2-action-btn" data-action="ai-tutor" data-qid="${escaped(questionId)}" data-explanation="${escaped(result.explanation)}" style="border:1px solid #c9a444;background:#fff8e6;border-radius:3px;padding:3px 8px;font-size:9.5px;cursor:pointer;color:#775211;">✨ Tanya Tutor AI</button>
+        </div>
+      `;
+    }
     questionCard.append(feedback);
-    if (result.correct) showToast('Jawabanmu benar. Hebat!');
-    else showToast('Belum tepat. Baca pembahasannya, ya.');
+
+    // Call adaptive answer API in background to update XP, streaks, and SM-2 queue
+    fetch(`${API}/adaptive/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(window.CerdasPillars ? {} : {}) },
+      body: JSON.stringify({
+        studentId: state.studentId,
+        questionId,
+        choice,
+        level: bookId,
+        curriculum,
+        phase,
+        subjectId,
+      }),
+    }).then((res) => res.json()).then((adaptiveRes) => {
+      if (adaptiveRes.adaptive) {
+        const lvlEl = document.querySelector('#user-adaptive-level');
+        const xpEl = document.querySelector('#user-adaptive-xp');
+        if (lvlEl && xpEl) {
+          lvlEl.textContent = `Level ${adaptiveRes.adaptive.levelNumber} (${adaptiveRes.adaptive.levelName})`;
+          xpEl.textContent = `${adaptiveRes.adaptive.xp} XP`;
+        }
+      }
+      if (adaptiveRes.completed50) {
+        showToast('🎖️ Selamat! Kamu telah menyelesaikan 50 soal! Lencana "Penjelajah 50 Soal" terbuka.');
+      }
+    }).catch(() => {});
+
+    if (result.correct) showToast('Jawabanmu benar. +15 XP! Hebat!');
+    else showToast('Belum tepat. Coba baca pembahasan atau Tanya Tutor AI.');
     updateFinishButton();
     renderBooks();
   } catch (error) {
@@ -873,25 +937,305 @@ function openAccountDialog() {
   state.dialogReturnFocus = document.activeElement;
   const dialog = $('#account-dialog');
   const signedIn = Boolean(state.account);
+  $('#account-error').textContent = '';
   $('#account-form').hidden = signedIn;
   $('#account-session-actions').hidden = !signedIn;
-  $('#close-account').hidden = state.authRequired;
-  $('#account-name-label').hidden = state.accountMode === 'login';
-  $('#account-role-field').hidden = state.accountMode === 'login';
-  $('#account-invite-field').hidden = state.accountMode === 'login' || $('#account-role').value === 'student';
-  $('#account-title').textContent = signedIn ? `Halo, ${state.account.name}.` : state.authRequired ? 'Masuk untuk mulai belajar.' : state.accountMode === 'login' ? 'Masuk ke akun belajar.' : 'Buat akun belajar.';
-  $('#account-copy').textContent = signedIn ? `${state.account.email} · ${state.account.role}. Progres tersimpan di akun ini.` : 'Masuk atau buat akun untuk membuka materi, latihan, dan progres belajar.';
-  $('#account-submit').textContent = state.accountMode === 'login' ? 'Masuk ke akun' : 'Buat akun';
-  $('#account-mode-toggle').innerHTML = state.accountMode === 'login' ? 'Belum punya akun? <span>Buat akun</span>' : 'Sudah punya akun? <span>Masuk</span>';
-  dialog.classList.toggle('auth-required', state.authRequired);
-  dialog.classList.add('is-open'); dialog.setAttribute('aria-hidden', 'false');
-  (signedIn ? $('#account-logout') : $('#account-email')).focus();
-  renderGoogleButton();
+  const pickerEl = $('#account-picker');
+  if (pickerEl) pickerEl.hidden = true;
+  $('#close-account').hidden = false;
+
+  const mode = state.accountMode || 'login';
+  const isRegister = mode === 'register';
+
+  const kicker = dialog.querySelector('.auth-kicker');
+  if (kicker) {
+    kicker.textContent = signedIn ? 'AKUN AKTIF' : isRegister ? 'PENDAFTARAN AKUN (MAKS 4 PER EMAIL)' : 'RUANG BELAJAR CERDAS CERMAT';
+  }
+
+  $('#account-name-label').hidden = !isRegister;
+  $('#account-role-field').hidden = !isRegister;
+  $('#account-invite-field').hidden = !isRegister || $('#account-role').value === 'student';
+
+  $('#account-name').disabled = !isRegister;
+  $('#account-name').required = isRegister;
+
+  $('#account-email-label').hidden = false;
+  $('#account-email').disabled = false;
+  $('#account-email').required = true;
+  $('#account-email').readOnly = false;
+
+  const hintEl = $('#account-email-hint');
+  if (hintEl) hintEl.hidden = !isRegister;
+
+  $('#account-password-label').hidden = false;
+  $('#account-password').disabled = false;
+  $('#account-password').required = true;
+
+  const forgotRow = $('#account-password-wrapper');
+  if (forgotRow) forgotRow.hidden = signedIn || isRegister;
+
+  $('#google-login-section').hidden = signedIn;
+  $('#account-auth-divider').hidden = signedIn;
+  $('#account-mode-toggle').hidden = signedIn;
+
+  if (signedIn) {
+    $('#account-title').textContent = `Halo, ${state.account.name}.`;
+    const roleText = state.account.role === 'admin' ? 'Admin / Developer' : state.account.role === 'teacher' ? 'Guru' : state.account.role === 'reviewer' ? 'Reviewer' : 'Siswa';
+    $('#account-copy').textContent = `${state.account.email} · ${roleText}. Progres tersimpan di akun ini.`;
+    const nameEl = $('#account-display-name');
+    if (nameEl) nameEl.textContent = state.account.name;
+    const metaEl = $('#account-display-meta');
+    if (metaEl) metaEl.textContent = `${state.account.email} · ${roleText}`;
+  } else if (isRegister) {
+    $('#account-title').textContent = 'Buat akun belajar.';
+    $('#account-copy').textContent = 'Daftar untuk menyimpan progres bacaan dan kuis belajarmu (maksimal 4 akun per email).';
+    $('#account-submit').textContent = 'Buat Akun (Maks 4)';
+    $('#account-mode-toggle').innerHTML = 'Sudah punya akun? <span>Masuk</span>';
+  } else {
+    $('#account-title').textContent = 'Masuk ke akun belajar.';
+    $('#account-copy').textContent = 'Masuk untuk melanjutkan perjalanan belajarmu.';
+    $('#account-submit').textContent = 'Masuk ke Akun';
+    $('#account-mode-toggle').innerHTML = 'Belum punya akun? <span>Buat akun</span>';
+  }
+
+  dialog.classList.toggle('auth-required', false);
+  dialog.classList.add('is-open');
+  dialog.setAttribute('aria-hidden', 'false');
+
+  if (signedIn) {
+    $('#account-logout').focus();
+  } else if (isRegister) {
+    $('#account-name').focus();
+  } else {
+    $('#account-email').focus();
+  }
+  if (!signedIn) renderGoogleButton();
+}
+
+const resetState = {
+  email: '',
+  expectedOtp: '',
+  accounts: [],
+  selectedAccountId: '',
+};
+
+function openResetPasswordDialog() {
+  state.dialogReturnFocus = document.activeElement;
+  const resetDialog = $('#reset-password-dialog');
+  const accountDialog = $('#account-dialog');
+  if (accountDialog && accountDialog.classList.contains('is-open')) {
+    accountDialog.classList.remove('is-open');
+    accountDialog.setAttribute('aria-hidden', 'true');
+  }
+
+  const existingEmail = $('#account-email')?.value?.trim() || '';
+  if (existingEmail) {
+    $('#reset-email').value = existingEmail;
+  }
+  $('#reset-step1-error').textContent = '';
+  $('#reset-step2-error').textContent = '';
+
+  $('#reset-request-form').hidden = false;
+  $('#reset-verify-form').hidden = true;
+  $('#reset-success-view').hidden = true;
+  $('#reset-password-title').innerHTML = 'Atur ulang <em>kata sandi.</em>';
+  $('#reset-password-copy').textContent = 'Masukkan email terdaftar untuk menerima kode verifikasi OTP 6-digit.';
+
+  resetDialog.classList.add('is-open');
+  resetDialog.setAttribute('aria-hidden', 'false');
+  $('#reset-email').focus();
+}
+
+function closeResetPasswordDialog() {
+  const dialog = $('#reset-password-dialog');
+  dialog.classList.remove('is-open');
+  dialog.setAttribute('aria-hidden', 'true');
+  (state.dialogReturnFocus || $('#account-link')).focus?.();
+}
+
+async function submitResetRequest(event) {
+  event?.preventDefault();
+  const errorEl = $('#reset-step1-error');
+  errorEl.textContent = '';
+  const email = $('#reset-email').value.trim().toLowerCase();
+  const submitBtn = $('#reset-request-submit');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errorEl.textContent = 'Format email tidak valid. Masukkan email yang benar.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Mengirim kode OTP…';
+
+  try {
+    const response = await fetch(`${API}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await safeJson(response);
+    if (!response.ok) {
+      throw new Error(data.message || data.error || 'Gagal mengirim kode OTP.');
+    }
+
+    resetState.email = email;
+    resetState.expectedOtp = String(data.debugOtp || '');
+    resetState.accounts = data.accounts || [];
+
+    $('#reset-sent-notice').textContent = `Kode OTP 6-digit telah dikirim ke ${email}.`;
+    const demoEl = $('#reset-demo-code');
+    if (data.debugOtp) {
+      demoEl.textContent = `Kode OTP (Demo): ${data.debugOtp}`;
+      demoEl.hidden = false;
+      $('#account-otp-input').value = data.debugOtp;
+    } else {
+      demoEl.hidden = true;
+      $('#account-otp-input').value = '';
+    }
+
+    const pickerBox = $('#reset-account-picker');
+    const selectEl = $('#reset-account-select');
+    if (resetState.accounts.length > 1) {
+      pickerBox.hidden = false;
+      selectEl.innerHTML = `
+        <option value="">Semua profil (${resetState.accounts.length} akun terdaftar)</option>
+        ${resetState.accounts.map((acc) => `<option value="${escaped(acc.id)}">${escaped(acc.name)} · ${acc.role === 'admin' ? 'Admin' : acc.role === 'teacher' ? 'Guru' : acc.role === 'reviewer' ? 'Reviewer' : 'Siswa'}</option>`).join('')}
+      `;
+    } else {
+      pickerBox.hidden = true;
+      selectEl.innerHTML = '';
+    }
+
+    $('#reset-request-form').hidden = true;
+    $('#reset-verify-form').hidden = false;
+    $('#reset-success-view').hidden = true;
+    $('#reset-password-title').innerHTML = 'Verifikasi <em>kode OTP.</em>';
+    $('#reset-password-copy').textContent = 'Masukkan kode 6 digit dan buat kata sandi baru untuk akunmu.';
+    $('#account-new-password').value = '';
+    $('#account-confirm-password').value = '';
+    $('#account-otp-input').focus();
+    showToast(`Kode OTP berhasil dikirim ke ${email}.`);
+  } catch (error) {
+    errorEl.textContent = error.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Kirim Kode OTP';
+  }
+}
+
+async function resendResetOtp() {
+  const errorEl = $('#reset-step2-error');
+  errorEl.textContent = '';
+  const email = resetState.email;
+  if (!email) return;
+
+  const resendBtn = $('#reset-resend-otp');
+  resendBtn.disabled = true;
+  resendBtn.textContent = 'Mengirim ulang…';
+
+  try {
+    const response = await fetch(`${API}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await safeJson(response);
+    if (!response.ok) throw new Error(data.message || data.error || 'Gagal mengirim ulang OTP.');
+
+    resetState.expectedOtp = String(data.debugOtp || '');
+    const demoEl = $('#reset-demo-code');
+    if (data.debugOtp) {
+      demoEl.textContent = `Kode OTP (Demo): ${data.debugOtp}`;
+      demoEl.hidden = false;
+      $('#account-otp-input').value = data.debugOtp;
+    }
+    showToast('Kode OTP baru telah dikirim.');
+  } catch (err) {
+    errorEl.textContent = err.message;
+  } finally {
+    resendBtn.disabled = false;
+    resendBtn.textContent = 'Kirim ulang kode OTP';
+  }
+}
+
+async function submitResetVerify(event) {
+  event.preventDefault();
+  const errorEl = $('#reset-step2-error');
+  errorEl.textContent = '';
+
+  const otp = $('#account-otp-input').value.trim();
+  const newPassword = $('#account-new-password').value;
+  const confirmPassword = $('#account-confirm-password').value;
+  const accountId = $('#reset-account-select')?.value || '';
+
+  // 1. Verifikasi kecocokan format kode OTP
+  if (!/^\d{6}$/.test(otp)) {
+    errorEl.textContent = 'Kode OTP harus berupa 6 digit angka.';
+    $('#account-otp-input').focus();
+    return;
+  }
+
+  // 2. Verifikasi kecocokan kode OTP yang dihasilkan di sisi klien
+  if (resetState.expectedOtp && otp !== resetState.expectedOtp) {
+    errorEl.textContent = 'Kode OTP yang dimasukkan tidak sesuai. Silakan periksa kembali kode Anda.';
+    $('#account-otp-input').focus();
+    return;
+  }
+
+  // 3. Validasi panjang account-new-password minimal 10 karakter
+  if (!newPassword || newPassword.length < 10) {
+    errorEl.textContent = 'Kata sandi baru minimal harus 10 karakter.';
+    $('#account-new-password').focus();
+    return;
+  }
+
+  // 4. Validasi kecocokan account-new-password dan account-confirm-password sebelum request API
+  if (newPassword !== confirmPassword) {
+    errorEl.textContent = 'Konfirmasi kata sandi tidak cocok dengan kata sandi baru.';
+    $('#account-confirm-password').focus();
+    return;
+  }
+
+  const submitBtn = $('#reset-verify-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Menyimpan kata sandi baru…';
+
+  try {
+    const response = await fetch(`${API}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: resetState.email,
+        otp,
+        newPassword,
+        confirmPassword,
+        accountId,
+      }),
+    });
+    const data = await safeJson(response);
+    if (!response.ok) {
+      throw new Error(data.message || data.error || 'Gagal mengatur ulang kata sandi.');
+    }
+
+    $('#reset-verify-form').hidden = true;
+    $('#reset-success-view').hidden = false;
+    $('#reset-password-title').innerHTML = 'Sandi <em>diperbarui!</em>';
+    $('#reset-password-copy').textContent = 'Kata sandi akun belajar Anda telah berhasil disimpan.';
+    showToast('Kata sandi berhasil diperbarui!');
+  } catch (error) {
+    errorEl.textContent = error.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Simpan Kata Sandi Baru';
+  }
 }
 
 function closeAccountDialog() {
-  if (state.authRequired) return;
-  const dialog = $('#account-dialog'); dialog.classList.remove('is-open'); dialog.setAttribute('aria-hidden', 'true'); (state.dialogReturnFocus || $('#account-link')).focus?.();
+  const dialog = $('#account-dialog');
+  dialog.classList.remove('is-open');
+  dialog.setAttribute('aria-hidden', 'true');
+  (state.dialogReturnFocus || $('#account-link')).focus?.();
 }
 
 function openUtilityDialog(id, initialFocus) {
@@ -900,7 +1244,7 @@ function openUtilityDialog(id, initialFocus) {
   (initialFocus ? $(initialFocus, dialog) : dialog.querySelector('button,input,textarea,select')).focus();
 }
 
-function closeUtilityDialog(id, returnFocus = '#progress-link') {
+function closeUtilityDialog(id, returnFocus = '#account-link') {
   const dialog = $(`#${id}`); dialog.classList.remove('is-open'); dialog.setAttribute('aria-hidden', 'true');
   const target = returnFocus && $(returnFocus) && !$(returnFocus).hidden ? $(returnFocus) : state.dialogReturnFocus;
   target?.focus?.();
@@ -1022,6 +1366,7 @@ async function establishSession(data) {
   state.studentId = data.user.id;
   localStorage.setItem('cerdas-cermat-token', state.token);
   localStorage.setItem('cerdas-cermat-account', JSON.stringify(state.account));
+  localStorage.removeItem('cerdas-cermat-logged-out');
   state.progress = readProgress();
   state.progressSnapshot = null;
   state.offlineQueue = state.offlineQueue.filter((item) => {
@@ -1030,7 +1375,9 @@ async function establishSession(data) {
   });
   saveOfflineQueue();
   state.authRequired = false;
-  $('main').inert = false;
+  state.appLoaded = false;
+  const mainEl = $('main');
+  if (mainEl) mainEl.inert = false;
   updateAccountControls();
   closeAccountDialog();
   $('#google-login-section').hidden = true;
@@ -1041,18 +1388,107 @@ async function establishSession(data) {
   showToast(`Masuk sebagai ${data.user.name}.`);
 }
 
+function showAccountPicker(email, password, accounts, message) {
+  $('#account-form').hidden = true;
+  const pickerEl = $('#account-picker');
+  pickerEl.hidden = false;
+  $('#account-picker-desc').textContent = message || 'Email ini memiliki beberapa akun. Pilih profil untuk masuk:';
+  const listEl = $('#account-picker-list');
+  listEl.innerHTML = accounts.map((acc) => {
+    const roleText = acc.role === 'admin' ? 'Admin' : acc.role === 'teacher' ? 'Guru' : acc.role === 'reviewer' ? 'Reviewer' : 'Siswa';
+    return `
+      <div class="account-picker-card">
+        <div class="account-picker-meta">
+          <strong>${escaped(acc.name)}</strong>
+          <span>${escaped(acc.email)} · ${roleText}</span>
+        </div>
+        <button type="button" class="catalog-start account-select-btn" data-account-id="${escaped(acc.id)}">Pilih</button>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.account-select-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const accountId = btn.dataset.accountId;
+      btn.disabled = true;
+      btn.textContent = 'Masuk…';
+      try {
+        const response = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, accountId }),
+        });
+        const data = await safeJson(response);
+        if (!response.ok) throw new Error(data.error || 'Gagal masuk ke akun yang dipilih.');
+        pickerEl.hidden = true;
+        await establishSession(data);
+      } catch (err) {
+        $('#account-error').textContent = err.message;
+        pickerEl.hidden = true;
+        $('#account-form').hidden = false;
+      }
+    });
+  });
+}
+
 async function submitAccount(event) {
   event.preventDefault();
   $('#account-error').textContent = '';
+  const submitBtn = $('#account-submit');
   const registering = state.accountMode === 'register';
-  const body = { email: $('#account-email').value, password: $('#account-password').value };
-  if (registering) Object.assign(body, { name: $('#account-name').value, role: $('#account-role').value, inviteCode: $('#account-invite').value });
+  const email = $('#account-email').value.trim();
+  const password = $('#account-password').value;
+
+  if (!email || !password) {
+    $('#account-error').textContent = 'Email dan kata sandi wajib diisi.';
+    return;
+  }
+
+  const body = { email, password };
+  if (registering) {
+    const name = $('#account-name').value.trim();
+    if (!name) {
+      $('#account-error').textContent = 'Nama lengkap wajib diisi.';
+      return;
+    }
+    Object.assign(body, {
+      name,
+      role: $('#account-role').value,
+      inviteCode: $('#account-invite').value.trim(),
+    });
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = registering ? 'Mendaftarkan akun…' : 'Memeriksa akun…';
+
   try {
-    const response = await fetch(`${API}/auth/${registering ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || data.error || 'Autentikasi gagal.');
-    await establishSession(data);
-  } catch (error) { $('#account-error').textContent = error.message; }
+    const response = await fetch(`${API}/auth/${registering ? 'register' : 'login'}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await safeJson(response);
+    if (!response.ok) {
+      throw new Error(data.message || data.error || (response.status === 401 ? 'Email atau kata sandi salah.' : 'Autentikasi gagal.'));
+    }
+
+    if (data.requiresAccountSelection && Array.isArray(data.accounts)) {
+      showAccountPicker(email, password, data.accounts, data.message);
+      return;
+    }
+
+    if (data.token && data.user) {
+      await establishSession(data);
+      if (registering) {
+        showToast(`Akun "${data.user.name}" berhasil dibuat (${data.accountIndex || 1}/4 untuk email ini)!`);
+      }
+    }
+  } catch (error) {
+    $('#account-error').textContent = error.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = registering ? 'Buat Akun (Maks 4)' : 'Masuk ke Akun';
+  }
 }
 
 async function handleGoogleCredential(credentialResponse) {
@@ -1063,22 +1499,59 @@ async function handleGoogleCredential(credentialResponse) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential: credentialResponse.credential }),
     });
-    const data = await response.json();
+    const data = await safeJson(response);
     if (!response.ok) throw new Error(data.message || data.error || 'Login Google gagal.');
     await establishSession(data);
   } catch (error) { $('#account-error').textContent = error.message; }
 }
 
+async function loginAsDeveloper(showNotification = true, secret = '') {
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (secret) headers['x-developer-secret'] = secret;
+    const response = await fetch(`${API}/auth/dev-login`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ secret }),
+    });
+    const data = await safeJson(response);
+    if (!response.ok) {
+      throw new Error(data.message || data.error || 'Akses developer ditolak.');
+    }
+    if (data.token && data.user) {
+      await establishSession(data);
+      if (showNotification) showToast('Mode Developer aktif. Selamat datang, Satrio S Utomo! ✨');
+      return true;
+    }
+  } catch (error) {
+    if (showNotification) showToast(`Akses developer ditolak: ${error.message}`);
+  }
+  return false;
+}
+
 async function logoutAccount() {
-  try { await request(`${API}/auth/logout`, { method: 'POST' }); } catch { /* Token sisi server berakhir saat proses dimulai ulang. */ }
-  localStorage.removeItem('cerdas-cermat-token'); localStorage.removeItem('cerdas-cermat-account');
-  state.token = ''; state.account = null; state.studentId = ''; state.progress = {}; state.progressSnapshot = null;
-  state.authRequired = true;
-  $('main').inert = true;
+  try {
+    await request(`${API}/auth/logout`, { method: 'POST' });
+  } catch {
+    /* Token sisi server berakhir saat proses dimulai ulang. */
+  }
+  localStorage.removeItem('cerdas-cermat-token');
+  localStorage.removeItem('cerdas-cermat-account');
+  localStorage.setItem('cerdas-cermat-logged-out', 'true');
+  state.token = '';
+  state.account = null;
+  state.studentId = '';
+  state.progress = {};
+  state.progressSnapshot = null;
+  state.authRequired = false;
+  state.appLoaded = false;
+  const mainEl = $('main');
+  if (mainEl) mainEl.inert = false;
   state.accountMode = 'login';
   updateAccountControls();
+  await loadApplication();
+  showToast('Kamu telah berhasil keluar dari akun.');
   openAccountDialog();
-  void loadGoogleLogin();
 }
 
 async function deleteProgress() {
@@ -1137,9 +1610,9 @@ async function resumeLatestReading() {
     if (!book || !curriculum || !phase || !subjectId || !topicId) { showToast('Materi terakhir tidak tersedia di katalog saat ini.'); return; }
     openCatalog(bookId);
     $('#curriculum-select').value = curriculum;
-    renderPhaseOptions(book, phase, curriculum);
+    const selectedPhase = renderPhaseOptions(book, phase, curriculum);
     await loadSubjectOptions(subjectId, topicId);
-    await openBook(bookId, curriculum, phase, subjectId, topicId);
+    await openBook(bookId, curriculum, selectedPhase, subjectId, topicId);
     showToast('Membuka materi terakhir yang kamu baca.');
   } catch (error) { showRetryToast(`Materi terakhir belum dapat dibuka: ${error.message}`, resumeLatestReading); }
 }
@@ -1222,7 +1695,7 @@ $('#sound-toggle').addEventListener('click', () => {
   $('#sound-toggle').classList.toggle('sound-on', state.sound);
   showToast(state.sound ? 'Suara halaman aktif.' : 'Suara halaman dimatikan.');
 });
-$('#progress-link').addEventListener('click', loadProgressSummary);
+$('#progress-link')?.addEventListener('click', loadProgressSummary);
 $('#resume-link').addEventListener('click', resumeLatestReading);
 $('#copy-donation-number').addEventListener('click', async () => {
   try {
@@ -1247,22 +1720,62 @@ $('#account-link').addEventListener('click', openAccountDialog);
 $('#close-account').addEventListener('click', closeAccountDialog);
 $('#account-mode-toggle').addEventListener('click', () => {
   state.accountMode = state.accountMode === 'login' ? 'register' : 'login';
-  $('#account-name-label').hidden = state.accountMode === 'login'; $('#account-role-field').hidden = state.accountMode === 'login';
-  $('#account-invite-field').hidden = state.accountMode === 'login' || $('#account-role').value === 'student';
-  $('#account-submit').textContent = state.accountMode === 'login' ? 'Masuk ke akun' : 'Buat akun';
-  $('#account-password').autocomplete = state.accountMode === 'login' ? 'current-password' : 'new-password';
-  $('#account-mode-toggle').innerHTML = state.accountMode === 'login' ? 'Belum punya akun? <span>Buat akun</span>' : 'Sudah punya akun? <span>Masuk</span>';
-  if (!state.account) $('#account-title').textContent = state.authRequired
-    ? state.accountMode === 'login' ? 'Masuk untuk mulai belajar.' : 'Buat akun untuk mulai belajar.'
-    : state.accountMode === 'login' ? 'Masuk ke akun belajar.' : 'Buat akun belajar.';
-  if (!state.account) $('#account-submit').textContent = state.accountMode === 'login' ? 'Masuk ke akun' : 'Buat akun';
-  if (!state.account) $('#account-mode-toggle').innerHTML = state.accountMode === 'login' ? 'Belum punya akun? <span>Buat akun</span>' : 'Sudah punya akun? <span>Masuk</span>';
-  renderGoogleButton();
+  openAccountDialog();
+});
+$('#account-picker-back')?.addEventListener('click', () => {
+  const pickerEl = $('#account-picker');
+  if (pickerEl) pickerEl.hidden = true;
+  $('#account-form').hidden = false;
+});
+$('#account-create-another-btn')?.addEventListener('click', () => {
+  const currentEmail = state.account?.email || '';
+  state.accountMode = 'register';
+  state.account = null;
+  state.token = '';
+  localStorage.removeItem('cerdas-cermat-token');
+  localStorage.removeItem('cerdas-cermat-account');
+  openAccountDialog();
+  if (currentEmail) {
+    $('#account-email').value = currentEmail;
+  }
+  $('#account-name').focus();
 });
 $('#account-role').addEventListener('change', () => { $('#account-invite-field').hidden = $('#account-role').value === 'student'; });
 $('#account-form').addEventListener('submit', submitAccount);
 $('#account-logout').addEventListener('click', logoutAccount);
 $('#account-dialog').addEventListener('click', (event) => { if (event.target === $('#account-dialog')) closeAccountDialog(); });
+
+// Reset Password Dialog Event Listeners
+$('#account-forgot-link')?.addEventListener('click', openResetPasswordDialog);
+$('#forgot-password-link')?.addEventListener('click', openResetPasswordDialog);
+$('#close-reset-password')?.addEventListener('click', closeResetPasswordDialog);
+$('#reset-cancel-step1')?.addEventListener('click', () => {
+  closeResetPasswordDialog();
+  openAccountDialog();
+});
+$('#reset-back-to-step1')?.addEventListener('click', () => {
+  $('#reset-verify-form').hidden = true;
+  $('#reset-request-form').hidden = false;
+  $('#reset-step1-error').textContent = '';
+  $('#reset-email').focus();
+});
+$('#reset-request-form')?.addEventListener('submit', submitResetRequest);
+$('#reset-verify-form')?.addEventListener('submit', submitResetVerify);
+$('#reset-resend-otp')?.addEventListener('click', resendResetOtp);
+$('#reset-success-login-btn')?.addEventListener('click', () => {
+  closeResetPasswordDialog();
+  state.accountMode = 'login';
+  openAccountDialog();
+  if (resetState.email) {
+    $('#account-email').value = resetState.email;
+  }
+  $('#account-password').value = '';
+  $('#account-password').focus();
+});
+$('#reset-password-dialog')?.addEventListener('click', (event) => {
+  if (event.target === $('#reset-password-dialog')) closeResetPasswordDialog();
+});
+
 $('#restart-quiz').addEventListener('click', restartQuiz);
 $('#mobile-menu').addEventListener('click', (event) => {
   const menu = $('.topnav');
@@ -1290,10 +1803,11 @@ document.addEventListener('keydown', (event) => {
   if (catalogDialog.classList.contains('is-open') && event.key === 'Escape') { closeCatalog(); return; }
   if (storybookDialog.classList.contains('is-open') && event.key === 'Escape') { closeStorybookDialog(); return; }
   if (resultsDialog.classList.contains('is-open') && event.key === 'Escape') { closeResults(); return; }
-  const openUtility = ['account-dialog', 'progress-dialog'].map((id) => $(`#${id}`)).find((dialog) => dialog.classList.contains('is-open'));
+  const openUtility = ['account-dialog', 'progress-dialog', 'reset-password-dialog'].map((id) => $(`#${id}`)).find((dialog) => dialog?.classList.contains('is-open'));
   if (openUtility && event.key === 'Escape') {
     if (openUtility.id === 'account-dialog') closeAccountDialog();
-    else closeUtilityDialog(openUtility.id, '#progress-link');
+    else if (openUtility.id === 'reset-password-dialog') closeResetPasswordDialog();
+    else closeUtilityDialog(openUtility.id, '#account-link');
     return;
   }
   const activeOverlay = [catalogDialog, storybookDialog, openUtility, resultsDialog, reader].find((dialog) => dialog?.classList.contains('is-open'));
@@ -1311,7 +1825,19 @@ document.addEventListener('keydown', (event) => {
 });
 
 async function loadApplication() {
-  if (state.appLoaded || !state.account) return;
+  if (!state.account) {
+    state.appLoaded = false;
+    bookGrid.innerHTML = `
+      <div class="loading-books guest-prompt-card">
+        <p><strong>Selamat datang di Perpustakaan Cerdas Cermat!</strong></p>
+        <p>Silakan masuk atau buat akun belajar untuk mulai membaca buku dan mengerjakan kuis.</p>
+        <button type="button" class="catalog-start" id="guest-login-btn" style="display:inline-block;margin-top:12px;padding:9px 24px;min-height:38px;font-size:13px;border-radius:8px;cursor:pointer;">Masuk ke Akun</button>
+      </div>
+    `;
+    $('#guest-login-btn')?.addEventListener('click', openAccountDialog);
+    return;
+  }
+  if (state.appLoaded) return;
   state.appLoaded = true;
   try {
     const data = await request(`${API}/catalog`);
@@ -1321,7 +1847,7 @@ async function loadApplication() {
     const requestedBook = new URLSearchParams(window.location.search).get('buku');
     if (state.books.some((book) => book.id === requestedBook)) openCatalog(requestedBook);
   } catch (error) {
-    bookGrid.innerHTML = `<p class="loading-books">${escaped(error.message)} Pastikan backend API dan frontend berjalan pada alamat yang benar.</p>`;
+    bookGrid.innerHTML = `<p class="loading-books">${escaped(error.message)}</p>`;
   }
 }
 
@@ -1330,21 +1856,26 @@ async function init() {
   setSyncStatus(navigator.onLine);
   window.addEventListener('online', () => { setSyncStatus(true); if (state.account) { showToast('Koneksi kembali. Menyinkronkan progres…'); void flushOfflineQueue(); } });
   window.addEventListener('offline', () => { setSyncStatus(false); if (state.account) showToast('Offline. Progres baru akan disimpan di perangkat sementara.'); });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => setSyncStatus(navigator.onLine, 'Online'));
-  if (state.token) {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch(() => setSyncStatus(navigator.onLine, 'Online'));
+  }
+
+  if (state.token && localStorage.getItem('cerdas-cermat-logged-out') !== 'true') {
     try {
       const current = await request(`${API}/auth/me`);
       state.account = current.user;
       state.studentId = current.user.id;
       state.progress = readProgress();
-      $('main').inert = false;
+      const mainEl = $('main');
+      if (mainEl) mainEl.inert = false;
       updateAccountControls();
       await loadApplication();
       void flushOfflineQueue();
       return;
     } catch {
       if (!navigator.onLine && state.account?.id) {
-        $('main').inert = false;
+        const mainEl = $('main');
+        if (mainEl) mainEl.inert = false;
         updateAccountControls();
         await loadApplication();
         return;
@@ -1354,11 +1885,13 @@ async function init() {
       state.studentId = ''; state.progress = {};
     }
   }
-  state.authRequired = true;
-  $('main').inert = true;
+
+  // Sesi belum aktif (tamu / pengunjung baru): jangan aktifkan akun developer secara otomatis
+  state.authRequired = false;
+  const mainEl = $('main');
+  if (mainEl) mainEl.inert = false;
   updateAccountControls();
-  openAccountDialog();
-  void loadGoogleLogin();
+  await loadApplication();
 }
 
 init();
